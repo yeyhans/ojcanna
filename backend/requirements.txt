@@ -12,7 +12,7 @@ iniconfig==2.3.0
 markdown-it-py==4.0.0
 mdurl==0.1.2
 numpy==2.4.3
-openpyxl==3.1.2
+openpyxl==3.1.5
 packaging==26.0
 pandas==3.0.1
 playwright==1.58.0
