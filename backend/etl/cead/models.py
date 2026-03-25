@@ -29,8 +29,8 @@ class CodigoItem(BaseModel):
 class ComunaItem(BaseModel):
     id: str
     nombre: str
-    region_id: str
-    provincia_id: str
+    region_id: str = ""
+    provincia_id: str = ""
 
 
 class CodigosMap(BaseModel):

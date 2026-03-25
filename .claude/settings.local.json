@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:cead.minsegpublica.gob.cl)",
+      "Bash(python -m venv venv)",
+      "Bash(venv/Scripts/pip install:*)",
+      "Bash(python3:*)",
+      "Bash(npx skills:*)"
+    ]
+  }
+}

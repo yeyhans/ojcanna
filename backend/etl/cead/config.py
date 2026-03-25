@@ -7,17 +7,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent  # backend/
 CEAD_BASE_URL = "https://cead.minsegpublica.gob.cl"
 CEAD_AJAX_URL = f"{CEAD_BASE_URL}/wp-content/themes/gobcl-wp-master/data/ajax_2.php"
 CEAD_PORTAL_URL = f"{CEAD_BASE_URL}/estadisticas-delictuales/"
+# Endpoint real de descarga de datos (get_estadisticas_delictuales.php)
+CEAD_DATA_URL = f"{CEAD_BASE_URL}/wp-content/themes/gobcl-wp-master/data/get_estadisticas_delictuales.php"
 
-# Seleccion codes
-SEL_REGION = 1
-SEL_PROVINCIA = 2
-SEL_COMUNA = 3
-SEL_ANIO = 6
-SEL_TRIMESTRE = 7
-SEL_MES = 8
-SEL_FAMILIA = 9
-SEL_GRUPO = 10
-SEL_SUBGRUPO = 11
+# Mapa subgrupo → grupo (confirmado via ingeniería inversa del portal)
+SUBGRUPO_GRUPO_MAP: dict[str, str] = {
+    "40101": "401", "40102": "401", "40103": "401", "40104": "401",
+    "70201": "702", "70202": "702", "70204": "702",
+}
 
 # Años disponibles
 ANIO_INICIO = 2005

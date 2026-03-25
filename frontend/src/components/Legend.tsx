@@ -20,12 +20,14 @@ export function Legend({ breaks }: Props) {
   return (
     <div
       className="
-        absolute bottom-8 right-4 z-20
+        absolute right-4 z-20
         bg-white/70 backdrop-blur-md
         border border-white/30
         rounded-xl shadow-lg
         px-3 py-3
         min-w-[140px]
+        bottom-[calc(80px+env(safe-area-inset-bottom,0px))]
+        md:bottom-8
       "
     >
       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">

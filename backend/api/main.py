@@ -1,4 +1,5 @@
 # backend/api/main.py
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -25,10 +26,13 @@ app = FastAPI(
 # Comprimir respuestas GeoJSON (~70% reducción de tamaño)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-# CORS abierto en desarrollo
+# CORS: en producción setear ALLOWED_ORIGINS=https://tu-app.vercel.app
+_raw_origins = os.getenv("ALLOWED_ORIGINS", "*")
+allowed_origins = [o.strip() for o in _raw_origins.split(",")]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_methods=["GET"],
     allow_headers=["*"],
 )

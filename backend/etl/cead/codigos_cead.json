@@ -1,0 +1,1504 @@
+{
+  "regiones": [
+    {
+      "id": "99",
+      "nombre": "TOTAL PAÍS"
+    },
+    {
+      "id": "15",
+      "nombre": "Región de Arica y Parinacota"
+    },
+    {
+      "id": "1",
+      "nombre": "Región de Tarapacá"
+    },
+    {
+      "id": "2",
+      "nombre": "Región de Antofagasta"
+    },
+    {
+      "id": "3",
+      "nombre": "Región de Atacama"
+    },
+    {
+      "id": "4",
+      "nombre": "Región de Coquimbo"
+    },
+    {
+      "id": "5",
+      "nombre": "Región de Valparaíso"
+    },
+    {
+      "id": "13",
+      "nombre": "Región Metropolitana"
+    },
+    {
+      "id": "6",
+      "nombre": "Región del Lib. Bernardo O'Higgins"
+    },
+    {
+      "id": "7",
+      "nombre": "Región del Maule"
+    },
+    {
+      "id": "16",
+      "nombre": "Región de Ñuble"
+    },
+    {
+      "id": "8",
+      "nombre": "Región del Biobío"
+    },
+    {
+      "id": "9",
+      "nombre": "Región de La Araucanía"
+    },
+    {
+      "id": "14",
+      "nombre": "Región de Los Ríos"
+    },
+    {
+      "id": "10",
+      "nombre": "Región de Los Lagos"
+    },
+    {
+      "id": "11",
+      "nombre": "Región de Aysén"
+    },
+    {
+      "id": "12",
+      "nombre": "Región de Magallanes"
+    }
+  ],
+  "familias_drogas": [
+    {
+      "id": "4",
+      "nombre": "Delitos asociados a drogas"
+    }
+  ],
+  "grupos_drogas": [
+    {
+      "id": "401",
+      "nombre": "Crímenes y simples delitos ley de drogas"
+    },
+    {
+      "id": "702",
+      "nombre": "Consumo de alcohol y drogas en la vía pública"
+    }
+  ],
+  "subgrupos_drogas": [
+    {
+      "id": "40101",
+      "nombre": "Tráfico de sustancias"
+    },
+    {
+      "id": "40102",
+      "nombre": "Microtráfico de sustancias"
+    },
+    {
+      "id": "40103",
+      "nombre": "Elaboración o producción de sustancias"
+    },
+    {
+      "id": "40104",
+      "nombre": "Otras infracciones a la ley de drogas"
+    },
+    {
+      "id": "70201",
+      "nombre": "Consumo de drogas en la vía pública"
+    },
+    {
+      "id": "70202",
+      "nombre": "Porte de drogas"
+    },
+    {
+      "id": "70204",
+      "nombre": "Consumo de alcohol en la vía pública"
+    }
+  ],
+  "comunas": [
+    {
+      "id": "5602",
+      "nombre": "Algarrobo"
+    },
+    {
+      "id": "13502",
+      "nombre": "Alhué"
+    },
+    {
+      "id": "8314",
+      "nombre": "Alto Biobío"
+    },
+    {
+      "id": "3302",
+      "nombre": "Alto del Carmen"
+    },
+    {
+      "id": "1107",
+      "nombre": "Alto Hospicio"
+    },
+    {
+      "id": "10202",
+      "nombre": "Ancud"
+    },
+    {
+      "id": "4103",
+      "nombre": "Andacollo"
+    },
+    {
+      "id": "9201",
+      "nombre": "Angol"
+    },
+    {
+      "id": "12202",
+      "nombre": "Antártica"
+    },
+    {
+      "id": "2101",
+      "nombre": "Antofagasta"
+    },
+    {
+      "id": "8302",
+      "nombre": "Antuco"
+    },
+    {
+      "id": "8202",
+      "nombre": "Arauco"
+    },
+    {
+      "id": "15101",
+      "nombre": "Arica"
+    },
+    {
+      "id": "11201",
+      "nombre": "Aysén"
+    },
+    {
+      "id": "13402",
+      "nombre": "Buin"
+    },
+    {
+      "id": "16102",
+      "nombre": "Bulnes"
+    },
+    {
+      "id": "5402",
+      "nombre": "Cabildo"
+    },
+    {
+      "id": "12201",
+      "nombre": "Cabo de Hornos"
+    },
+    {
+      "id": "8303",
+      "nombre": "Cabrero"
+    },
+    {
+      "id": "2201",
+      "nombre": "Calama"
+    },
+    {
+      "id": "10102",
+      "nombre": "Calbuco"
+    },
+    {
+      "id": "3102",
+      "nombre": "Caldera"
+    },
+    {
+      "id": "13403",
+      "nombre": "Calera de Tango"
+    },
+    {
+      "id": "5302",
+      "nombre": "Calle Larga"
+    },
+    {
+      "id": "15102",
+      "nombre": "Camarones"
+    },
+    {
+      "id": "1402",
+      "nombre": "Camiña"
+    },
+    {
+      "id": "4202",
+      "nombre": "Canela"
+    },
+    {
+      "id": "8203",
+      "nombre": "Cañete"
+    },
+    {
+      "id": "9102",
+      "nombre": "Carahue"
+    },
+    {
+      "id": "5603",
+      "nombre": "Cartagena"
+    },
+    {
+      "id": "5102",
+      "nombre": "Casablanca"
+    },
+    {
+      "id": "10201",
+      "nombre": "Castro"
+    },
+    {
+      "id": "5702",
+      "nombre": "Catemu"
+    },
+    {
+      "id": "7201",
+      "nombre": "Cauquenes"
+    },
+    {
+      "id": "13102",
+      "nombre": "Cerrillos"
+    },
+    {
+      "id": "13103",
+      "nombre": "Cerro Navia"
+    },
+    {
+      "id": "10401",
+      "nombre": "Chaitén"
+    },
+    {
+      "id": "7202",
+      "nombre": "Chanco"
+    },
+    {
+      "id": "3201",
+      "nombre": "Chañaral"
+    },
+    {
+      "id": "6302",
+      "nombre": "Chépica"
+    },
+    {
+      "id": "8103",
+      "nombre": "Chiguayante"
+    },
+    {
+      "id": "11401",
+      "nombre": "Chile Chico"
+    },
+    {
+      "id": "16101",
+      "nombre": "Chillán"
+    },
+    {
+      "id": "16103",
+      "nombre": "Chillán Viejo"
+    },
+    {
+      "id": "6303",
+      "nombre": "Chimbarongo"
+    },
+    {
+      "id": "9121",
+      "nombre": "Cholchol"
+    },
+    {
+      "id": "10203",
+      "nombre": "Chonchi"
+    },
+    {
+      "id": "11202",
+      "nombre": "Cisnes"
+    },
+    {
+      "id": "16202",
+      "nombre": "Cobquecura"
+    },
+    {
+      "id": "10103",
+      "nombre": "Cochamó"
+    },
+    {
+      "id": "11301",
+      "nombre": "Cochrane"
+    },
+    {
+      "id": "6102",
+      "nombre": "Codegua"
+    },
+    {
+      "id": "16203",
+      "nombre": "Coelemu"
+    },
+    {
+      "id": "16302",
+      "nombre": "Coihueco"
+    },
+    {
+      "id": "6103",
+      "nombre": "Coinco"
+    },
+    {
+      "id": "7402",
+      "nombre": "Colbún"
+    },
+    {
+      "id": "1403",
+      "nombre": "Colchane"
+    },
+    {
+      "id": "13301",
+      "nombre": "Colina"
+    },
+    {
+      "id": "9202",
+      "nombre": "Collipulli"
+    },
+    {
+      "id": "6104",
+      "nombre": "Coltauco"
+    },
+    {
+      "id": "4302",
+      "nombre": "Combarbalá"
+    },
+    {
+      "id": "8101",
+      "nombre": "Concepción"
+    },
+    {
+      "id": "13104",
+      "nombre": "Conchalí"
+    },
+    {
+      "id": "5103",
+      "nombre": "Concón"
+    },
+    {
+      "id": "7102",
+      "nombre": "Constitución"
+    },
+    {
+      "id": "8204",
+      "nombre": "Contulmo"
+    },
+    {
+      "id": "3101",
+      "nombre": "Copiapó"
+    },
+    {
+      "id": "4102",
+      "nombre": "Coquimbo"
+    },
+    {
+      "id": "8102",
+      "nombre": "Coronel"
+    },
+    {
+      "id": "14102",
+      "nombre": "Corral"
+    },
+    {
+      "id": "11101",
+      "nombre": "Coyhaique"
+    },
+    {
+      "id": "9103",
+      "nombre": "Cunco"
+    },
+    {
+      "id": "9203",
+      "nombre": "Curacautín"
+    },
+    {
+      "id": "13503",
+      "nombre": "Curacaví"
+    },
+    {
+      "id": "10204",
+      "nombre": "Curaco de Vélez"
+    },
+    {
+      "id": "8205",
+      "nombre": "Curanilahue"
+    },
+    {
+      "id": "9104",
+      "nombre": "Curarrehue"
+    },
+    {
+      "id": "7103",
+      "nombre": "Curepto"
+    },
+    {
+      "id": "7301",
+      "nombre": "Curicó"
+    },
+    {
+      "id": "10205",
+      "nombre": "Dalcahue"
+    },
+    {
+      "id": "3202",
+      "nombre": "Diego de Almagro"
+    },
+    {
+      "id": "6105",
+      "nombre": "Doñihue"
+    },
+    {
+      "id": "13105",
+      "nombre": "El Bosque"
+    },
+    {
+      "id": "16104",
+      "nombre": "El Carmen"
+    },
+    {
+      "id": "13602",
+      "nombre": "El Monte"
+    },
+    {
+      "id": "5604",
+      "nombre": "El Quisco"
+    },
+    {
+      "id": "5605",
+      "nombre": "El Tabo"
+    },
+    {
+      "id": "7104",
+      "nombre": "Empedrado"
+    },
+    {
+      "id": "9204",
+      "nombre": "Ercilla"
+    },
+    {
+      "id": "13106",
+      "nombre": "Estación Central"
+    },
+    {
+      "id": "8104",
+      "nombre": "Florida"
+    },
+    {
+      "id": "9105",
+      "nombre": "Freire"
+    },
+    {
+      "id": "3303",
+      "nombre": "Freirina"
+    },
+    {
+      "id": "10104",
+      "nombre": "Fresia"
+    },
+    {
+      "id": "10105",
+      "nombre": "Frutillar"
+    },
+    {
+      "id": "10402",
+      "nombre": "Futaleufú"
+    },
+    {
+      "id": "14202",
+      "nombre": "Futrono"
+    },
+    {
+      "id": "9106",
+      "nombre": "Galvarino"
+    },
+    {
+      "id": "15202",
+      "nombre": "General Lagos"
+    },
+    {
+      "id": "9107",
+      "nombre": "Gorbea"
+    },
+    {
+      "id": "6106",
+      "nombre": "Graneros"
+    },
+    {
+      "id": "11203",
+      "nombre": "Guaitecas"
+    },
+    {
+      "id": "5503",
+      "nombre": "Hijuelas"
+    },
+    {
+      "id": "10403",
+      "nombre": "Hualaihué"
+    },
+    {
+      "id": "7302",
+      "nombre": "Hualañé"
+    },
+    {
+      "id": "8112",
+      "nombre": "Hualpén"
+    },
+    {
+      "id": "8105",
+      "nombre": "Hualqui"
+    },
+    {
+      "id": "1404",
+      "nombre": "Huara"
+    },
+    {
+      "id": "3304",
+      "nombre": "Huasco"
+    },
+    {
+      "id": "13107",
+      "nombre": "Huechuraba"
+    },
+    {
+      "id": "4201",
+      "nombre": "Illapel"
+    },
+    {
+      "id": "13108",
+      "nombre": "Independencia"
+    },
+    {
+      "id": "1101",
+      "nombre": "Iquique"
+    },
+    {
+      "id": "13603",
+      "nombre": "Isla de Maipo"
+    },
+    {
+      "id": "5201",
+      "nombre": "Isla de Pascua"
+    },
+    {
+      "id": "5104",
+      "nombre": "Juan Fernández"
+    },
+    {
+      "id": "5502",
+      "nombre": "La Calera"
+    },
+    {
+      "id": "13109",
+      "nombre": "La Cisterna"
+    },
+    {
+      "id": "5504",
+      "nombre": "La Cruz"
+    },
+    {
+      "id": "6202",
+      "nombre": "La Estrella"
+    },
+    {
+      "id": "13110",
+      "nombre": "La Florida"
+    },
+    {
+      "id": "13111",
+      "nombre": "La Granja"
+    },
+    {
+      "id": "4104",
+      "nombre": "La Higuera"
+    },
+    {
+      "id": "5401",
+      "nombre": "La Ligua"
+    },
+    {
+      "id": "13112",
+      "nombre": "La Pintana"
+    },
+    {
+      "id": "13113",
+      "nombre": "La Reina"
+    },
+    {
+      "id": "4101",
+      "nombre": "La Serena"
+    },
+    {
+      "id": "14201",
+      "nombre": "La Unión"
+    },
+    {
+      "id": "14203",
+      "nombre": "Lago Ranco"
+    },
+    {
+      "id": "11102",
+      "nombre": "Lago Verde"
+    },
+    {
+      "id": "12102",
+      "nombre": "Laguna Blanca"
+    },
+    {
+      "id": "8304",
+      "nombre": "Laja"
+    },
+    {
+      "id": "13302",
+      "nombre": "Lampa"
+    },
+    {
+      "id": "14103",
+      "nombre": "Lanco"
+    },
+    {
+      "id": "6107",
+      "nombre": "Las Cabras"
+    },
+    {
+      "id": "13114",
+      "nombre": "Las Condes"
+    },
+    {
+      "id": "9108",
+      "nombre": "Lautaro"
+    },
+    {
+      "id": "8201",
+      "nombre": "Lebu"
+    },
+    {
+      "id": "7303",
+      "nombre": "Licantén"
+    },
+    {
+      "id": "5802",
+      "nombre": "Limache"
+    },
+    {
+      "id": "7401",
+      "nombre": "Linares"
+    },
+    {
+      "id": "6203",
+      "nombre": "Litueche"
+    },
+    {
+      "id": "5703",
+      "nombre": "Llaillay"
+    },
+    {
+      "id": "10107",
+      "nombre": "Llanquihue"
+    },
+    {
+      "id": "13115",
+      "nombre": "Lo Barnechea"
+    },
+    {
+      "id": "13116",
+      "nombre": "Lo Espejo"
+    },
+    {
+      "id": "13117",
+      "nombre": "Lo Prado"
+    },
+    {
+      "id": "6304",
+      "nombre": "Lolol"
+    },
+    {
+      "id": "9109",
+      "nombre": "Loncoche"
+    },
+    {
+      "id": "7403",
+      "nombre": "Longaví"
+    },
+    {
+      "id": "9205",
+      "nombre": "Lonquimay"
+    },
+    {
+      "id": "8206",
+      "nombre": "Los Álamos"
+    },
+    {
+      "id": "5301",
+      "nombre": "Los Andes"
+    },
+    {
+      "id": "8301",
+      "nombre": "Los Ángeles"
+    },
+    {
+      "id": "14104",
+      "nombre": "Los Lagos"
+    },
+    {
+      "id": "10106",
+      "nombre": "Los Muermos"
+    },
+    {
+      "id": "9206",
+      "nombre": "Los Sauces"
+    },
+    {
+      "id": "4203",
+      "nombre": "Los Vilos"
+    },
+    {
+      "id": "8106",
+      "nombre": "Lota"
+    },
+    {
+      "id": "9207",
+      "nombre": "Lumaco"
+    },
+    {
+      "id": "6108",
+      "nombre": "Machalí"
+    },
+    {
+      "id": "13118",
+      "nombre": "Macul"
+    },
+    {
+      "id": "14105",
+      "nombre": "Máfil"
+    },
+    {
+      "id": "13119",
+      "nombre": "Maipú"
+    },
+    {
+      "id": "6109",
+      "nombre": "Malloa"
+    },
+    {
+      "id": "6204",
+      "nombre": "Marchigüe"
+    },
+    {
+      "id": "2302",
+      "nombre": "María Elena"
+    },
+    {
+      "id": "13504",
+      "nombre": "María Pinto"
+    },
+    {
+      "id": "14106",
+      "nombre": "Mariquina"
+    },
+    {
+      "id": "7105",
+      "nombre": "Maule"
+    },
+    {
+      "id": "10108",
+      "nombre": "Maullín"
+    },
+    {
+      "id": "2102",
+      "nombre": "Mejillones"
+    },
+    {
+      "id": "9110",
+      "nombre": "Melipeuco"
+    },
+    {
+      "id": "13501",
+      "nombre": "Melipilla"
+    },
+    {
+      "id": "7304",
+      "nombre": "Molina"
+    },
+    {
+      "id": "4303",
+      "nombre": "Monte Patria"
+    },
+    {
+      "id": "6110",
+      "nombre": "Mostazal"
+    },
+    {
+      "id": "8305",
+      "nombre": "Mulchén"
+    },
+    {
+      "id": "8306",
+      "nombre": "Nacimiento"
+    },
+    {
+      "id": "6305",
+      "nombre": "Nancagua"
+    },
+    {
+      "id": "12401",
+      "nombre": "Natales"
+    },
+    {
+      "id": "6205",
+      "nombre": "Navidad"
+    },
+    {
+      "id": "8307",
+      "nombre": "Negrete"
+    },
+    {
+      "id": "16204",
+      "nombre": "Ninhue"
+    },
+    {
+      "id": "5506",
+      "nombre": "Nogales"
+    },
+    {
+      "id": "9111",
+      "nombre": "Nueva Imperial"
+    },
+    {
+      "id": "16303",
+      "nombre": "Ñiquén"
+    },
+    {
+      "id": "13120",
+      "nombre": "Ñuñoa"
+    },
+    {
+      "id": "11302",
+      "nombre": "OHiggins"
+    },
+    {
+      "id": "6111",
+      "nombre": "Olivar"
+    },
+    {
+      "id": "2202",
+      "nombre": "Ollagüe"
+    },
+    {
+      "id": "5803",
+      "nombre": "Olmué"
+    },
+    {
+      "id": "10301",
+      "nombre": "Osorno"
+    },
+    {
+      "id": "4301",
+      "nombre": "Ovalle"
+    },
+    {
+      "id": "13604",
+      "nombre": "Padre Hurtado"
+    },
+    {
+      "id": "9112",
+      "nombre": "Padre Las Casas"
+    },
+    {
+      "id": "4105",
+      "nombre": "Paiguano"
+    },
+    {
+      "id": "14107",
+      "nombre": "Paillaco"
+    },
+    {
+      "id": "13404",
+      "nombre": "Paine"
+    },
+    {
+      "id": "10404",
+      "nombre": "Palena"
+    },
+    {
+      "id": "6306",
+      "nombre": "Palmilla"
+    },
+    {
+      "id": "14108",
+      "nombre": "Panguipulli"
+    },
+    {
+      "id": "5704",
+      "nombre": "Panquehue"
+    },
+    {
+      "id": "5403",
+      "nombre": "Papudo"
+    },
+    {
+      "id": "6206",
+      "nombre": "Paredones"
+    },
+    {
+      "id": "7404",
+      "nombre": "Parral"
+    },
+    {
+      "id": "13121",
+      "nombre": "Pedro Aguirre Cerda"
+    },
+    {
+      "id": "7106",
+      "nombre": "Pelarco"
+    },
+    {
+      "id": "7203",
+      "nombre": "Pelluhue"
+    },
+    {
+      "id": "16105",
+      "nombre": "Pemuco"
+    },
+    {
+      "id": "7107",
+      "nombre": "Pencahue"
+    },
+    {
+      "id": "8107",
+      "nombre": "Penco"
+    },
+    {
+      "id": "13605",
+      "nombre": "Peñaflor"
+    },
+    {
+      "id": "13122",
+      "nombre": "Peñalolén"
+    },
+    {
+      "id": "6307",
+      "nombre": "Peralillo"
+    },
+    {
+      "id": "9113",
+      "nombre": "Perquenco"
+    },
+    {
+      "id": "5404",
+      "nombre": "Petorca"
+    },
+    {
+      "id": "6112",
+      "nombre": "Peumo"
+    },
+    {
+      "id": "1405",
+      "nombre": "Pica"
+    },
+    {
+      "id": "6113",
+      "nombre": "Pichidegua"
+    },
+    {
+      "id": "6201",
+      "nombre": "Pichilemu"
+    },
+    {
+      "id": "16106",
+      "nombre": "Pinto"
+    },
+    {
+      "id": "13202",
+      "nombre": "Pirque"
+    },
+    {
+      "id": "9114",
+      "nombre": "Pitrufquén"
+    },
+    {
+      "id": "6308",
+      "nombre": "Placilla"
+    },
+    {
+      "id": "16205",
+      "nombre": "Portezuelo"
+    },
+    {
+      "id": "12301",
+      "nombre": "Porvenir"
+    },
+    {
+      "id": "1401",
+      "nombre": "Pozo Almonte"
+    },
+    {
+      "id": "12302",
+      "nombre": "Primavera"
+    },
+    {
+      "id": "13123",
+      "nombre": "Providencia"
+    },
+    {
+      "id": "5105",
+      "nombre": "Puchuncaví"
+    },
+    {
+      "id": "9115",
+      "nombre": "Pucón"
+    },
+    {
+      "id": "13124",
+      "nombre": "Pudahuel"
+    },
+    {
+      "id": "13201",
+      "nombre": "Puente Alto"
+    },
+    {
+      "id": "10101",
+      "nombre": "Puerto Montt"
+    },
+    {
+      "id": "10302",
+      "nombre": "Puerto Octay"
+    },
+    {
+      "id": "10109",
+      "nombre": "Puerto Varas"
+    },
+    {
+      "id": "6309",
+      "nombre": "Pumanque"
+    },
+    {
+      "id": "4304",
+      "nombre": "Punitaqui"
+    },
+    {
+      "id": "12101",
+      "nombre": "Punta Arenas"
+    },
+    {
+      "id": "10206",
+      "nombre": "Puqueldón"
+    },
+    {
+      "id": "9208",
+      "nombre": "Purén"
+    },
+    {
+      "id": "10303",
+      "nombre": "Purranque"
+    },
+    {
+      "id": "5705",
+      "nombre": "Putaendo"
+    },
+    {
+      "id": "15201",
+      "nombre": "Putre"
+    },
+    {
+      "id": "10304",
+      "nombre": "Puyehue"
+    },
+    {
+      "id": "10207",
+      "nombre": "Queilén"
+    },
+    {
+      "id": "10208",
+      "nombre": "Quellón"
+    },
+    {
+      "id": "10209",
+      "nombre": "Quemchi"
+    },
+    {
+      "id": "8308",
+      "nombre": "Quilaco"
+    },
+    {
+      "id": "13125",
+      "nombre": "Quilicura"
+    },
+    {
+      "id": "8309",
+      "nombre": "Quilleco"
+    },
+    {
+      "id": "16107",
+      "nombre": "Quillón"
+    },
+    {
+      "id": "5501",
+      "nombre": "Quillota"
+    },
+    {
+      "id": "5801",
+      "nombre": "Quilpué"
+    },
+    {
+      "id": "10210",
+      "nombre": "Quinchao"
+    },
+    {
+      "id": "6114",
+      "nombre": "Quinta de Tilcoco"
+    },
+    {
+      "id": "13126",
+      "nombre": "Quinta Normal"
+    },
+    {
+      "id": "5107",
+      "nombre": "Quintero"
+    },
+    {
+      "id": "16201",
+      "nombre": "Quirihue"
+    },
+    {
+      "id": "6101",
+      "nombre": "Rancagua"
+    },
+    {
+      "id": "16206",
+      "nombre": "Ránquil"
+    },
+    {
+      "id": "7305",
+      "nombre": "Rauco"
+    },
+    {
+      "id": "13127",
+      "nombre": "Recoleta"
+    },
+    {
+      "id": "9209",
+      "nombre": "Renaico"
+    },
+    {
+      "id": "13128",
+      "nombre": "Renca"
+    },
+    {
+      "id": "6115",
+      "nombre": "Rengo"
+    },
+    {
+      "id": "6116",
+      "nombre": "Requínoa"
+    },
+    {
+      "id": "7405",
+      "nombre": "Retiro"
+    },
+    {
+      "id": "5303",
+      "nombre": "Rinconada"
+    },
+    {
+      "id": "14204",
+      "nombre": "Río Bueno"
+    },
+    {
+      "id": "7108",
+      "nombre": "Río Claro"
+    },
+    {
+      "id": "4305",
+      "nombre": "Río Hurtado"
+    },
+    {
+      "id": "11402",
+      "nombre": "Río Ibáñez"
+    },
+    {
+      "id": "10305",
+      "nombre": "Río Negro"
+    },
+    {
+      "id": "12103",
+      "nombre": "Río Verde"
+    },
+    {
+      "id": "7306",
+      "nombre": "Romeral"
+    },
+    {
+      "id": "9116",
+      "nombre": "Saavedra"
+    },
+    {
+      "id": "7307",
+      "nombre": "Sagrada Familia"
+    },
+    {
+      "id": "4204",
+      "nombre": "Salamanca"
+    },
+    {
+      "id": "5601",
+      "nombre": "San Antonio"
+    },
+    {
+      "id": "13401",
+      "nombre": "San Bernardo"
+    },
+    {
+      "id": "16301",
+      "nombre": "San Carlos"
+    },
+    {
+      "id": "7109",
+      "nombre": "San Clemente"
+    },
+    {
+      "id": "5304",
+      "nombre": "San Esteban"
+    },
+    {
+      "id": "16304",
+      "nombre": "San Fabián"
+    },
+    {
+      "id": "5701",
+      "nombre": "San Felipe"
+    },
+    {
+      "id": "6301",
+      "nombre": "San Fernando"
+    },
+    {
+      "id": "12104",
+      "nombre": "San Gregorio"
+    },
+    {
+      "id": "16108",
+      "nombre": "San Ignacio"
+    },
+    {
+      "id": "7406",
+      "nombre": "San Javier"
+    },
+    {
+      "id": "13129",
+      "nombre": "San Joaquín"
+    },
+    {
+      "id": "13203",
+      "nombre": "San José de Maipo"
+    },
+    {
+      "id": "10306",
+      "nombre": "San Juan de la Costa"
+    },
+    {
+      "id": "13130",
+      "nombre": "San Miguel"
+    },
+    {
+      "id": "16305",
+      "nombre": "San Nicolás"
+    },
+    {
+      "id": "10307",
+      "nombre": "San Pablo"
+    },
+    {
+      "id": "13505",
+      "nombre": "San Pedro"
+    },
+    {
+      "id": "2203",
+      "nombre": "San Pedro de Atacama"
+    },
+    {
+      "id": "8108",
+      "nombre": "San Pedro de la Paz"
+    },
+    {
+      "id": "7110",
+      "nombre": "San Rafael"
+    },
+    {
+      "id": "13131",
+      "nombre": "San Ramón"
+    },
+    {
+      "id": "8310",
+      "nombre": "San Rosendo"
+    },
+    {
+      "id": "6117",
+      "nombre": "San Vicente"
+    },
+    {
+      "id": "8311",
+      "nombre": "Santa Bárbara"
+    },
+    {
+      "id": "6310",
+      "nombre": "Santa Cruz"
+    },
+    {
+      "id": "8109",
+      "nombre": "Santa Juana"
+    },
+    {
+      "id": "5706",
+      "nombre": "Santa María"
+    },
+    {
+      "id": "13101",
+      "nombre": "Santiago"
+    },
+    {
+      "id": "5606",
+      "nombre": "Santo Domingo"
+    },
+    {
+      "id": "2103",
+      "nombre": "Sierra Gorda"
+    },
+    {
+      "id": "13601",
+      "nombre": "Talagante"
+    },
+    {
+      "id": "7101",
+      "nombre": "Talca"
+    },
+    {
+      "id": "8110",
+      "nombre": "Talcahuano"
+    },
+    {
+      "id": "2104",
+      "nombre": "Taltal"
+    },
+    {
+      "id": "9101",
+      "nombre": "Temuco"
+    },
+    {
+      "id": "7308",
+      "nombre": "Teno"
+    },
+    {
+      "id": "9117",
+      "nombre": "Teodoro Schmidt"
+    },
+    {
+      "id": "3103",
+      "nombre": "Tierra Amarilla"
+    },
+    {
+      "id": "13303",
+      "nombre": "Tiltil"
+    },
+    {
+      "id": "12303",
+      "nombre": "Timaukel"
+    },
+    {
+      "id": "8207",
+      "nombre": "Tirúa"
+    },
+    {
+      "id": "2301",
+      "nombre": "Tocopilla"
+    },
+    {
+      "id": "9118",
+      "nombre": "Toltén"
+    },
+    {
+      "id": "8111",
+      "nombre": "Tomé"
+    },
+    {
+      "id": "12402",
+      "nombre": "Torres del Paine"
+    },
+    {
+      "id": "11303",
+      "nombre": "Tortel"
+    },
+    {
+      "id": "9210",
+      "nombre": "Traiguén"
+    },
+    {
+      "id": "16207",
+      "nombre": "Treguaco"
+    },
+    {
+      "id": "8312",
+      "nombre": "Tucapel"
+    },
+    {
+      "id": "14101",
+      "nombre": "Valdivia"
+    },
+    {
+      "id": "3301",
+      "nombre": "Vallenar"
+    },
+    {
+      "id": "5101",
+      "nombre": "Valparaíso"
+    },
+    {
+      "id": "7309",
+      "nombre": "Vichuquén"
+    },
+    {
+      "id": "9211",
+      "nombre": "Victoria"
+    },
+    {
+      "id": "4106",
+      "nombre": "Vicuña"
+    },
+    {
+      "id": "9119",
+      "nombre": "Vilcún"
+    },
+    {
+      "id": "7407",
+      "nombre": "Villa Alegre"
+    },
+    {
+      "id": "5804",
+      "nombre": "Villa Alemana"
+    },
+    {
+      "id": "9120",
+      "nombre": "Villarrica"
+    },
+    {
+      "id": "5109",
+      "nombre": "Viña del Mar"
+    },
+    {
+      "id": "13132",
+      "nombre": "Vitacura"
+    },
+    {
+      "id": "7408",
+      "nombre": "Yerbas Buenas"
+    },
+    {
+      "id": "8313",
+      "nombre": "Yumbel"
+    },
+    {
+      "id": "16109",
+      "nombre": "Yungay"
+    },
+    {
+      "id": "5405",
+      "nombre": "Zapallar"
+    }
+  ]
+}

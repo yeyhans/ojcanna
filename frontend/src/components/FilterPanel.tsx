@@ -3,23 +3,23 @@ import { useEffect, useState } from 'react'
 import { motion, useMotionValue } from 'framer-motion'
 import type { FiltrosResponse, SubgrupoItem } from '../types/cead'
 import { SubgrupoCheckbox } from './SubgrupoCheckbox'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 interface Props {
   onChange: (anio: number, subgrupos: string[]) => void
 }
 
-// Snap points en px desde bottom (mobile bottom sheet)
 const SNAP_COLLAPSED = 64
-const SNAP_HALF = typeof window !== 'undefined' ? window.innerHeight * 0.4 : 300
-const SNAP_FULL = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 600
+const getSnapHalf = () => window.innerHeight * 0.4
+const getSnapFull = () => window.innerHeight * 0.85
 
 export function FilterPanel({ onChange }: Props) {
+  const isMobile = useIsMobile()
   const [filtros, setFiltros] = useState<FiltrosResponse | null>(null)
   const [anio, setAnio] = useState<number>(2024)
   const [subgruposSeleccionados, setSubgruposSeleccionados] = useState<string[]>([])
   const [sheetHeight, setSheetHeight] = useState(SNAP_COLLAPSED)
   const dragY = useMotionValue(0)
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
 
   useEffect(() => {
     fetch('/api/v1/cead/filtros')
@@ -28,7 +28,6 @@ export function FilterPanel({ onChange }: Props) {
         setFiltros(data)
         const latestAnio = Math.max(...data.anios)
         setAnio(latestAnio)
-        // Todos checked por defecto
         const allIds = data.subgrupos.map((s: SubgrupoItem) => s.id)
         setSubgruposSeleccionados(allIds)
         onChange(latestAnio, allIds)
@@ -45,13 +44,13 @@ export function FilterPanel({ onChange }: Props) {
     const updated = checked
       ? [...subgruposSeleccionados, id]
       : subgruposSeleccionados.filter((s) => s !== id)
-    if (updated.length === 0) return // Al menos 1 subgrupo
+    if (updated.length === 0) return
     setSubgruposSeleccionados(updated)
     onChange(anio, updated)
   }
 
   const snapToNearest = (y: number) => {
-    const snaps = [SNAP_COLLAPSED, SNAP_HALF, SNAP_FULL]
+    const snaps = [SNAP_COLLAPSED, getSnapHalf(), getSnapFull()]
     const closest = snaps.reduce((prev, curr) =>
       Math.abs(curr - y) < Math.abs(prev - y) ? curr : prev
     )
@@ -61,7 +60,6 @@ export function FilterPanel({ onChange }: Props) {
 
   const panelContent = (
     <div className="flex flex-col gap-5 h-full overflow-y-auto">
-      {/* Año */}
       <div>
         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
           Año
@@ -81,7 +79,6 @@ export function FilterPanel({ onChange }: Props) {
         </select>
       </div>
 
-      {/* Subgrupos */}
       <div>
         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
           Delitos
@@ -99,14 +96,12 @@ export function FilterPanel({ onChange }: Props) {
         </div>
       </div>
 
-      {/* Nota */}
       <p className="text-xs text-slate-400 mt-auto pb-2">
         Fuente: CEAD / Subsecretaría de Prevención del Delito
       </p>
     </div>
   )
 
-  // Desktop: sidebar fija
   if (!isMobile) {
     return (
       <aside
@@ -128,7 +123,6 @@ export function FilterPanel({ onChange }: Props) {
     )
   }
 
-  // Mobile: bottom sheet
   return (
     <motion.div
       className="
@@ -137,16 +131,19 @@ export function FilterPanel({ onChange }: Props) {
         bg-white/80 backdrop-blur-md
         border-t border-white/30
         shadow-2xl shadow-slate-300/50
-        px-5 pt-3 pb-6
+        px-5 pt-3
         overflow-hidden
       "
-      style={{ height: sheetHeight }}
+      style={{
+        height: sheetHeight,
+        paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))',
+      }}
       drag="y"
       dragConstraints={{ top: 0, bottom: 0 }}
       dragElastic={0.1}
       onDragEnd={(_, info) => {
         const newHeight = sheetHeight - info.offset.y
-        snapToNearest(Math.max(SNAP_COLLAPSED, Math.min(SNAP_FULL, newHeight)))
+        snapToNearest(Math.max(SNAP_COLLAPSED, Math.min(getSnapFull(), newHeight)))
       }}
       animate={{ height: sheetHeight }}
       transition={{ type: 'spring', damping: 25, stiffness: 200 }}
