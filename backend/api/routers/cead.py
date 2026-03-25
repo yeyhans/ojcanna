@@ -1,14 +1,16 @@
 # backend/api/routers/cead.py
 import json
+from datetime import datetime
 from pathlib import Path
 
 import asyncpg
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from starlette.responses import Response
 
 from api.database import get_pool
 from api.schemas.cead import (
-    Feature,
     FeatureCollection,
+    Feature,
     FeatureProperties,
     FiltrosResponse,
     SubgrupoItem,
@@ -23,34 +25,44 @@ SUBGRUPOS_VALIDOS: dict[str, str] = {
     s["id"]: s["nombre"] for s in _CODIGOS["subgrupos_drogas"]
 }
 
-# Query central: LEFT JOIN comunas + cead_hechos
+# Cache de respuestas JSON serializadas, keyed por (anio, frozenset(subgrupo_ids))
+_RESPONSE_CACHE: dict[tuple, bytes] = {}
+
+# Query central: solo datos estadísticos — geometrías vienen del geom_cache
 _MAPA_SQL = """
 SELECT
     c.cut,
     c.nombre,
-    ST_AsGeoJSON(c.geom, 6)::text        AS geometry_json,
-    COALESCE(SUM(h.tasa_100k),  0)       AS tasa_agregada,
-    COALESCE(SUM(h.frecuencia), 0)       AS frecuencia_total
+    COALESCE(SUM(h.tasa_100k),  0) AS tasa_agregada,
+    COALESCE(SUM(h.frecuencia), 0) AS frecuencia_total
 FROM comunas c
 LEFT JOIN cead_hechos h
-    ON  c.cut          = h.comuna_id
-    AND h.anio         = $1
-    AND h.subgrupo_id  = ANY($2::text[])
+    ON  c.cut         = h.comuna_id
+    AND h.anio        = $1
+    AND h.subgrupo_id = ANY($2::text[])
     AND h.taxonomy_version = $3
-GROUP BY c.cut, c.nombre, c.geom
+GROUP BY c.cut, c.nombre
 ORDER BY c.cut
 """
+
+# Query para cargar geometrías al arrancar (precisión 4 decimales ~11m)
+_GEOM_SQL = "SELECT cut, ST_AsGeoJSON(geom, 4)::text AS geom FROM comunas ORDER BY cut"
+
+
+async def load_geom_cache(pool: asyncpg.Pool) -> dict[str, dict]:
+    """Carga las 344 geometrías una sola vez al iniciar la app."""
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(_GEOM_SQL)
+    return {row["cut"]: json.loads(row["geom"]) for row in rows}
 
 
 @router.get("/mapa/cead", response_model=FeatureCollection)
 async def mapa_cead(
+    request: Request,
     anio: int = Query(..., ge=2005, le=2030, description="Año a consultar"),
     subgrupos: str = Query(..., description="IDs de subgrupos separados por coma, ej: 40101,40102"),
     pool: asyncpg.Pool = Depends(get_pool),
-) -> FeatureCollection:
-    """Devuelve un GeoJSON FeatureCollection con las 344 comunas coloreadas
-    según la suma de frecuencia/tasa para el año y subgrupos seleccionados."""
-
+) -> Response:
     subgrupo_ids = [s.strip() for s in subgrupos.split(",") if s.strip()]
     if not subgrupo_ids:
         raise HTTPException(status_code=422, detail="Se requiere al menos un subgrupo_id")
@@ -62,14 +74,20 @@ async def mapa_cead(
             detail=f"subgrupo_id inválido: {invalidos}. Válidos: {list(SUBGRUPOS_VALIDOS)}",
         )
 
+    cache_key = (anio, frozenset(subgrupo_ids))
+
+    if cache_key in _RESPONSE_CACHE:
+        return _build_response(_RESPONSE_CACHE[cache_key], anio)
+
     taxonomy = TAXONOMY_2024 if anio >= TAXONOMY_CUTOFF_YEAR else TAXONOMY_LEGACY
+    geom_cache: dict[str, dict] = request.app.state.geom_cache
 
     async with pool.acquire() as conn:
         rows = await conn.fetch(_MAPA_SQL, anio, subgrupo_ids, taxonomy)
 
     features = [
         Feature(
-            geometry=json.loads(row["geometry_json"]),
+            geometry=geom_cache.get(row["cut"], {}),
             properties=FeatureProperties(
                 cut=row["cut"],
                 nombre=row["nombre"],
@@ -79,7 +97,19 @@ async def mapa_cead(
         )
         for row in rows
     ]
-    return FeatureCollection(features=features)
+    body = FeatureCollection(features=features).model_dump_json().encode()
+    _RESPONSE_CACHE[cache_key] = body
+    return _build_response(body, anio)
+
+
+def _build_response(body: bytes, anio: int) -> Response:
+    current_year = datetime.now().year
+    max_age = 3600 if anio >= current_year else 86400
+    return Response(
+        content=body,
+        media_type="application/json",
+        headers={"Cache-Control": f"public, max-age={max_age}"},
+    )
 
 
 @router.get("/cead/filtros", response_model=FiltrosResponse)

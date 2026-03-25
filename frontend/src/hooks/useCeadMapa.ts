@@ -13,8 +13,11 @@ interface UseCeadMapaResult {
   retry: () => void
 }
 
+// Cache de respuestas a nivel de módulo: sobrevive cambios de filtro en la misma sesión
+const _clientCache = new Map<string, CeadFeatureCollection>()
+
 export function useCeadMapa(
-  anio: number,
+  anio: number | null,
   subgrupos: string[]
 ): UseCeadMapaResult {
   const [geojson, setGeojson] = useState<CeadFeatureCollection | null>(null)
@@ -29,7 +32,22 @@ export function useCeadMapa(
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const fetchData = useCallback(() => {
-    if (subgrupos.length === 0) return
+    if (anio === null || subgrupos.length === 0) return
+
+    const params = new URLSearchParams({
+      anio: String(anio),
+      subgrupos: subgrupos.join(','),
+    })
+    const url = `/api/v1/mapa/cead?${params}`
+
+    // Cache hit: sin red
+    const cached = _clientCache.get(url)
+    if (cached) {
+      setGeojson(cached)
+      setColorExpression(buildStepExpression(cached.features))
+      setLegendBreaks(buildLegendBreaks(cached.features))
+      return
+    }
 
     // Cancelar request anterior
     if (abortRef.current) abortRef.current.abort()
@@ -39,17 +57,13 @@ export function useCeadMapa(
     setIsLoading(true)
     setError(null)
 
-    const params = new URLSearchParams({
-      anio: String(anio),
-      subgrupos: subgrupos.join(','),
-    })
-
-    fetch(`/api/v1/mapa/cead?${params}`, { signal })
+    fetch(url, { signal })
       .then((res) => {
         if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`)
         return res.json() as Promise<CeadFeatureCollection>
       })
       .then((data) => {
+        _clientCache.set(url, data)
         setGeojson(data)
         setColorExpression(buildStepExpression(data.features))
         setLegendBreaks(buildLegendBreaks(data.features))

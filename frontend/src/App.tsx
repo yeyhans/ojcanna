@@ -7,14 +7,12 @@ import { InfoModal } from './components/InfoModal'
 import { useCeadMapa } from './hooks/useCeadMapa'
 
 export default function App() {
-  const [anio, setAnio] = useState(2024)
-  const [subgrupos, setSubgrupos] = useState<string[]>([
-    '40101', '40102', '40103', '40104', '70201', '70202', '70204',
-  ])
+  const [anio, setAnio] = useState<number | null>(null)
+  const [subgrupos, setSubgrupos] = useState<string[] | null>(null)
   const [infoOpen, setInfoOpen] = useState(false)
 
   const { geojson, colorExpression, legendBreaks, isLoading, error, retry } =
-    useCeadMapa(anio, subgrupos)
+    useCeadMapa(anio, subgrupos ?? [])
 
   const handleFilterChange = (newAnio: number, newSubgrupos: string[]) => {
     setAnio(newAnio)

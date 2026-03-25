@@ -7,12 +7,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
 from api.database import create_pool
-from api.routers.cead import router as cead_router
+from api.routers.cead import load_geom_cache, router as cead_router
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.pool = await create_pool()
+    app.state.geom_cache = await load_geom_cache(app.state.pool)
     yield
     await app.state.pool.close()
 
