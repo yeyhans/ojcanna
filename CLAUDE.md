@@ -13,9 +13,28 @@
 - `/backend/nlp`: Modelos de procesamiento de lenguaje natural para clasificación de sentencias y extracción de nombres de jueces.
 
 ## Comandos Principales
-- Iniciar API Backend: `uvicorn main:app --reload`
-- Iniciar Frontend: `npm run dev`
-- Ejecutar pipeline de extracción: `python backend/etl/runner.py`
+
+### Backend (desde `backend/`)
+```bash
+# Iniciar API
+uvicorn api.main:app --reload --port 8000
+
+# Tests de integración
+pytest tests/api/ -v
+
+# Migración de datos (una vez)
+python etl/cead/load_comunas.py           # Carga geometrías comunales (GADM)
+python -c "from etl.cead.consolidator import CeadConsolidator; CeadConsolidator(db_url=os.getenv('DATABASE_URL')).run()"
+
+# ETL completo CEAD
+python -m etl.cead.runner
+```
+
+### Frontend (desde `frontend/`)
+```bash
+npm run dev     # Desarrollo (proxy → localhost:8000)
+npm run build   # Build producción
+```
 
 ## Reglas y Convenciones
 - Utilizar funciones asíncronas (`async def`) en los endpoints de FastAPI para maximizar la concurrencia.
