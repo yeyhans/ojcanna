@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Data (large files)
+backend/data/checkpoint.jsonl
+backend/data/raw/
+backend/data/geo/comunas_bcn/
+
+# Logs
+backend/logs/
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

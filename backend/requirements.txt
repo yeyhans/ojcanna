@@ -34,3 +34,11 @@ tenacity==8.3.0
 typing-inspection==0.4.2
 typing_extensions==4.15.0
 tzdata==2025.3
+# API
+fastapi>=0.115
+uvicorn[standard]>=0.32
+asyncpg>=0.29
+python-dotenv>=1.0
+# Geoespacial
+geopandas>=1.0
+shapely>=2.0
