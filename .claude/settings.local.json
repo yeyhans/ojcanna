@@ -5,7 +5,29 @@
       "Bash(python -m venv venv)",
       "Bash(venv/Scripts/pip install:*)",
       "Bash(python3:*)",
-      "Bash(npx skills:*)"
+      "Bash(npx skills:*)",
+      "WebFetch(domain:www.fiscaliadechile.cl)",
+      "WebFetch(domain:www.gendarmeria.gob.cl)",
+      "WebFetch(domain:www.senda.gob.cl)",
+      "WebFetch(domain:www.dpp.cl)",
+      "WebFetch(domain:datos.gob.cl)",
+      "WebFetch(domain:www.sag.gob.cl)",
+      "WebFetch(domain:www.uaf.cl)",
+      "WebFetch(domain:html.gendarmeria.gob.cl)",
+      "WebFetch(domain:estadisticas.fiscaliadechile.cl)",
+      "Read(//c/Users/yeyso/.claude/projects/C--Users-yeyso-Desktop-web-anonimouscanna/6b83e5c2-6542-42b5-8512-4529ab7776d4/tool-results/**)",
+      "Bash(ls -lh *.xlsx)",
+      "WebFetch(domain:www.seguridadpublica.gov.cl)",
+      "WebFetch(domain:www.ine.cl)",
+      "Bash(python -m pip list)",
+      "Bash(npx tsc:*)",
+      "Bash(\"C:\\\\Users\\\\yeyso\\\\Desktop\\\\web\\\\anonimouscanna\\\\backend\\\\venv\\\\Scripts\\\\python.exe\" -c \"import psycopg2; print\\('psycopg2 OK'\\)\" 2>&1)",
+      "Bash(.venvScriptspython.exe -m pip install \"xlrd>=2.0.1\" --quiet)",
+      "Bash(./venv/Scripts/python.exe -m pip install \"xlrd>=2.0.1\" --quiet)",
+      "Bash(PYTHONUTF8=1 ./venv/Scripts/python.exe -c \":*)",
+      "Bash(cat /c/Users/yeyso/Desktop/web/anonimouscanna/frontend/tailwind.config.*)",
+      "Bash(cat /c/Users/yeyso/Desktop/web/anonimouscanna/tailwind.config.*)",
+      "Bash(npm run:*)"
     ]
   }
 }

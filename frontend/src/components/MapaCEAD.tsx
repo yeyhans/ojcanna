@@ -15,6 +15,7 @@ interface Props {
   geojson: CeadFeatureCollection | null
   colorExpression: ExpressionSpecification | null
   isLoading: boolean
+  onComunaSelect?: (cut: string, nombre: string) => void
 }
 
 interface TooltipState {
@@ -23,7 +24,7 @@ interface TooltipState {
   y: number
 }
 
-export function MapaCEAD({ geojson, colorExpression, isLoading }: Props) {
+export function MapaCEAD({ geojson, colorExpression, isLoading, onComunaSelect }: Props) {
   const isMobile = useIsMobile()
   const [tooltip, setTooltip] = useState<TooltipState>({ feature: null, x: 0, y: 0 })
   const [selectedFeature, setSelectedFeature] = useState<{ properties: CeadFeatureProperties } | null>(null)
@@ -47,11 +48,13 @@ export function MapaCEAD({ geojson, colorExpression, isLoading }: Props) {
   const onClick = useCallback((e: MapLayerMouseEvent) => {
     const feature = e.features?.[0]
     if (feature) {
-      setSelectedFeature(feature as unknown as { properties: CeadFeatureProperties })
+      const typed = feature as unknown as { properties: CeadFeatureProperties }
+      setSelectedFeature(typed)
+      onComunaSelect?.(typed.properties.cut, typed.properties.nombre)
     } else {
       setSelectedFeature(null)
     }
-  }, [])
+  }, [onComunaSelect])
 
   const fillColor = colorExpression ?? NO_DATA
 

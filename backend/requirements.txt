@@ -42,3 +42,5 @@ python-dotenv>=1.0
 # Geoespacial
 geopandas>=1.0
 shapely>=2.0
+# Nuevas fuentes DPP/PDI — lectura de XLS legado
+xlrd>=2.0

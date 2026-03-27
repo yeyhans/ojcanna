@@ -31,6 +31,7 @@ from etl.cead.config import (
     SUBGRUPO_GRUPO_MAP,
 )
 from etl.cead.models import CodigosMap
+from etl.common.checkpoint import Checkpoint
 
 logger = logging.getLogger(__name__)
 
@@ -81,33 +82,6 @@ def _to_float(raw: str | None) -> float | None:
         return None
 
 
-class Checkpoint:
-    def __init__(self, path: Path):
-        self.path = path
-        self._done: set[tuple] = set()
-        self._cargar()
-
-    def _cargar(self) -> None:
-        if self.path.exists():
-            with open(self.path, "r", encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if line:
-                        try:
-                            d = json.loads(line)
-                            self._done.add((d["comuna_id"], str(d["anio"]), d["subgrupo_id"]))
-                        except (KeyError, json.JSONDecodeError):
-                            pass
-
-    def ya_descargado(self, comuna_id: str, anio: int, subgrupo_id: str) -> bool:
-        return (comuna_id, str(anio), subgrupo_id) in self._done
-
-    def guardar(self, row: dict) -> None:
-        self._done.add((row["comuna_id"], str(row["anio"]), row["subgrupo_id"]))
-        with open(self.path, "a", encoding="utf-8") as f:
-            f.write(json.dumps(row, ensure_ascii=False) + "\n")
-
-
 class CeadExtractor:
     def __init__(
         self,
@@ -117,7 +91,10 @@ class CeadExtractor:
     ):
         self.raw_dir = raw_dir
         self.raw_dir.mkdir(parents=True, exist_ok=True)
-        self.checkpoint = Checkpoint(checkpoint_path)
+        self.checkpoint = Checkpoint(
+            checkpoint_path,
+            key_fields=("comuna_id", "anio", "subgrupo_id"),
+        )
 
         with open(codigos_path, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -131,7 +108,9 @@ class CeadExtractor:
         for comuna in self.codigos.comunas:
             for anio in anios:
                 for subgrupo in self.codigos.subgrupos_drogas:
-                    if not self.checkpoint.ya_descargado(comuna.id, anio, subgrupo.id):
+                    if not self.checkpoint.ya_descargado(
+                        comuna_id=comuna.id, anio=anio, subgrupo_id=subgrupo.id
+                    ):
                         pendientes.append((comuna, anio, subgrupo))
         return pendientes
 

@@ -1,19 +1,22 @@
 // frontend/src/lib/colorScale.ts
 import type { ExpressionSpecification } from 'maplibre-gl'
-import type { CeadFeature } from '../types/cead'
 
 export const PALETTE = ['#e0f2fe', '#7dd3fc', '#3b82f6', '#1d4ed8', '#1e3a8a']
 export const NO_DATA = '#f1f5f9'
 
 /**
- * Calcula 5 breaks cuantiles sobre frecuencia_total y construye
+ * Calcula 5 breaks cuantiles sobre la propiedad indicada y construye
  * una expresión MapLibre `step` para fill-color.
+ *
+ * @param features   Array de GeoJSON features con propiedades numéricas.
+ * @param valueProperty  Nombre de la propiedad a usar (default: 'frecuencia_total').
  */
 export function buildStepExpression(
-  features: CeadFeature[]
+  features: GeoJSON.Feature[],
+  valueProperty: string = 'frecuencia_total'
 ): ExpressionSpecification {
   const values = features
-    .map((f) => f.properties?.frecuencia_total ?? 0)
+    .map((f) => (f.properties?.[valueProperty] ?? 0) as number)
     .filter((v) => v > 0)
     .sort((a, b) => a - b)
 
@@ -27,7 +30,7 @@ export function buildStepExpression(
 
   return [
     'step',
-    ['get', 'frecuencia_total'],
+    ['get', valueProperty],
     NO_DATA,
     0.001, PALETTE[0],
     breaks[0], PALETTE[1],
@@ -38,11 +41,17 @@ export function buildStepExpression(
 }
 
 /**
- * Devuelve las etiquetas de leyenda basadas en los breaks.
+ * Devuelve los breaks cuantiles para construir la leyenda.
+ *
+ * @param features   Array de GeoJSON features.
+ * @param valueProperty  Nombre de la propiedad numérica (default: 'frecuencia_total').
  */
-export function buildLegendBreaks(features: CeadFeature[]): number[] {
+export function buildLegendBreaks(
+  features: GeoJSON.Feature[],
+  valueProperty: string = 'frecuencia_total'
+): number[] {
   const values = features
-    .map((f) => f.properties?.frecuencia_total ?? 0)
+    .map((f) => (f.properties?.[valueProperty] ?? 0) as number)
     .filter((v) => v > 0)
     .sort((a, b) => a - b)
 

@@ -1,83 +1,33 @@
 // frontend/src/App.tsx
-import { useState } from 'react'
-import { MapaCEAD } from './components/MapaCEAD'
-import { FilterPanel } from './components/FilterPanel'
-import { Legend } from './components/Legend'
-import { InfoModal } from './components/InfoModal'
-import { useCeadMapa } from './hooks/useCeadMapa'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { NavBar } from './components/NavBar'
+import MapaPage from './pages/MapaPage'
+import DppPage from './pages/DppPage'
+import PdiPage from './pages/PdiPage'
+import EmbudoPage from './pages/EmbudoPage'
 
 export default function App() {
-  const [anio, setAnio] = useState<number | null>(null)
-  const [subgrupos, setSubgrupos] = useState<string[] | null>(null)
-  const [infoOpen, setInfoOpen] = useState(false)
-
-  const { geojson, colorExpression, legendBreaks, isLoading, error, retry } =
-    useCeadMapa(anio, subgrupos ?? [])
-
-  const handleFilterChange = (newAnio: number, newSubgrupos: string[]) => {
-    setAnio(newAnio)
-    setSubgrupos(newSubgrupos)
-  }
-
   return (
-    <div className="relative w-full h-[100dvh] bg-slate-50 overflow-hidden">
-      {/* Mapa full-viewport */}
-      <MapaCEAD
-        geojson={geojson}
-        colorExpression={colorExpression}
-        isLoading={isLoading}
-      />
+    <BrowserRouter>
+      {/* NavBar fija — 3rem de altura (h-12) */}
+      <NavBar />
 
-      {/* Panel de filtros */}
-      <FilterPanel onChange={handleFilterChange} />
+      {/* Contenido debajo del NavBar */}
+      <div className="h-[100dvh] flex flex-col" style={{ paddingTop: 'calc(3rem + env(safe-area-inset-top))' }}>
+        <Routes>
+          {/* Mapa CEAD — ocupa todo el espacio disponible */}
+          <Route path="/" element={
+            <div className="flex-1 relative overflow-hidden">
+              <MapaPage />
+            </div>
+          } />
 
-      {/* Leyenda */}
-      {legendBreaks.length > 0 && (
-        <Legend breaks={legendBreaks} />
-      )}
-
-      {/* Botón de info */}
-      <button
-        onClick={() => setInfoOpen(true)}
-        aria-label="Información sobre los datos"
-        className="
-          absolute top-4 right-4 z-20
-          w-8 h-8 flex items-center justify-center
-          rounded-full
-          bg-white/70 backdrop-blur-md
-          border border-white/40
-          shadow-md shadow-slate-200/60
-          text-slate-500 hover:text-slate-800
-          text-sm font-semibold
-          transition-colors
-        "
-      >
-        i
-      </button>
-
-      {/* Modal informativo */}
-      <InfoModal open={infoOpen} onClose={() => setInfoOpen(false)} />
-
-      {/* Error toast */}
-      {error && (
-        <div
-          className="
-            absolute top-4 left-1/2 -translate-x-1/2 z-30
-            bg-red-50 border border-red-200
-            rounded-xl shadow-lg
-            px-4 py-3 flex items-center gap-3
-            max-w-sm
-          "
-        >
-          <span className="text-sm text-red-700 flex-1">{error}</span>
-          <button
-            onClick={retry}
-            className="text-xs font-semibold text-red-600 hover:text-red-800 shrink-0"
-          >
-            Reintentar
-          </button>
-        </div>
-      )}
-    </div>
+          {/* Páginas analíticas — scroll */}
+          <Route path="/dpp"    element={<div className="flex-1 overflow-y-auto"><DppPage /></div>} />
+          <Route path="/pdi"    element={<div className="flex-1 overflow-y-auto"><PdiPage /></div>} />
+          <Route path="/embudo" element={<div className="flex-1 overflow-y-auto"><EmbudoPage /></div>} />
+        </Routes>
+      </div>
+    </BrowserRouter>
   )
 }
