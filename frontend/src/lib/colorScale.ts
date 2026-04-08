@@ -1,8 +1,8 @@
 // frontend/src/lib/colorScale.ts
 import type { ExpressionSpecification } from 'maplibre-gl'
 
-export const PALETTE = ['#e0f2fe', '#7dd3fc', '#3b82f6', '#1d4ed8', '#1e3a8a']
-export const NO_DATA = '#f1f5f9'
+export const PALETTE = ['#1a1a1a', '#3f3f3f', '#737373', '#b0b0b0', '#f8f8f6']
+export const NO_DATA = '#0a0a0a'
 
 /**
  * Calcula 5 breaks cuantiles sobre la propiedad indicada y construye

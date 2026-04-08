@@ -4,19 +4,127 @@
 @tailwind components;
 @tailwind utilities;
 
-* {
-  box-sizing: border-box;
+@font-face {
+  font-family: 'CalSans';
+  src: url('/fonts/CalSans-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
 }
 
-body {
-  margin: 0;
-  padding: 0;
-  background-color: #f8fafc;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  -webkit-font-smoothing: antialiased;
+:root {
+  --background: 55 7% 97%;
+  --foreground: 0 0% 4%;
+  --card: 55 7% 97%;
+  --card-foreground: 0 0% 4%;
+  --popover: 55 7% 97%;
+  --popover-foreground: 0 0% 4%;
+  --primary: 0 0% 4%;
+  --primary-foreground: 55 7% 97%;
+  --secondary: 47 5% 94%;
+  --secondary-foreground: 0 0% 4%;
+  --muted: 47 5% 94%;
+  --muted-foreground: 0 0% 35%;
+  --accent: 47 5% 94%;
+  --accent-foreground: 0 0% 4%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 47 5% 88%;
+  --input: 47 5% 88%;
+  --ring: 0 0% 4%;
+  --radius: 0.25rem;
+
+  /* Deep Tech Premium custom properties */
+  --ink: #0a0a0a;
+  --paper: #f8f8f6;
+  --dim: #5a5a5a;
+  --rule: #e2e2de;
 }
 
-#root {
-  width: 100%;
-  height: 100dvh;
+.dark {
+  --background: 0 0% 4%;
+  --foreground: 0 0% 98%;
+  --card: 0 0% 5%;
+  --card-foreground: 0 0% 98%;
+  --popover: 0 0% 5%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 0 0% 98%;
+  --primary-foreground: 0 0% 4%;
+  --secondary: 0 0% 10%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 0 0% 10%;
+  --muted-foreground: 0 0% 64%;
+  --accent: 0 0% 10%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 0 0% 10%;
+  --input: 0 0% 10%;
+  --ring: 0 0% 98%;
+
+  /* Deep Tech Premium custom properties (dark) */
+  --ink: #ffffff;
+  --paper: #0d0d0d;
+  --dim: #b0b0b0;
+  --rule: #1a1a1a;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-[#0a0a0a] text-[#f8f8f6] antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+  
+  .dark body {
+    @apply bg-[#0a0a0a] text-[#ffffff];
+  }
+}
+
+@layer components {
+  .ghost-text {
+    font-family: 'CalSans', sans-serif;
+    font-size: clamp(80px, 15vw, 240px);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.05em;
+    pointer-events: none;
+    user-select: none;
+    opacity: 0.05;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] uppercase tracking-[0.2em] font-bold border;
+    font-family: 'CalSans', sans-serif;
+  }
+
+  .text-h1-deep {
+    @apply font-bold leading-[0.95] tracking-[-0.05em];
+    font-family: 'CalSans', sans-serif;
+    font-size: clamp(40px, 8vw, 72px);
+  }
+
+  .text-h2-deep {
+    @apply font-bold leading-[1.02] tracking-[-0.04em];
+    font-family: 'CalSans', sans-serif;
+    font-size: clamp(28px, 5vw, 42px);
+  }
+
+  .text-label-deep {
+    @apply text-[10px] uppercase tracking-[0.3em] font-medium;
+  }
+}
+
+@layer utilities {
+  .dot-grid-light {
+    background-image: radial-gradient(circle, rgba(0,0,0,0.04) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  .dot-grid-dark {
+    background-image: radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
 }

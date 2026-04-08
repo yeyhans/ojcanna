@@ -1,15 +1,11 @@
 // frontend/src/components/Legend.tsx
 import { PALETTE, NO_DATA } from '../lib/colorScale'
 
-interface Props {
-  breaks: number[]
-}
-
-export function Legend({ breaks }: Props) {
+export function Legend({ breaks }: { breaks: number[] }) {
   if (breaks.length === 0) return null
 
   const items = [
-    { color: NO_DATA, label: 'Sin datos' },
+    { color: NO_DATA, label: 'SIN REGISTRO' },
     { color: PALETTE[0], label: `1 – ${Math.round(breaks[0])}` },
     { color: PALETTE[1], label: `${Math.round(breaks[0])} – ${Math.round(breaks[1])}` },
     { color: PALETTE[2], label: `${Math.round(breaks[1])} – ${Math.round(breaks[2])}` },
@@ -18,29 +14,20 @@ export function Legend({ breaks }: Props) {
   ]
 
   return (
-    <div
-      className="
-        absolute right-4 z-20
-        bg-white/70 backdrop-blur-md
-        border border-white/30
-        rounded-xl shadow-lg
-        px-3 py-3
-        min-w-[140px]
-        bottom-[calc(80px+env(safe-area-inset-bottom,0px))]
-        md:bottom-8
-      "
-    >
-      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-        Casos
+    <div className="absolute right-6 z-20 bg-[#0a0a0a]/80 backdrop-blur-xl border border-[#2a2a2a] shadow-2xl p-4 min-w-[160px] bottom-[calc(90px+env(safe-area-inset-bottom,0px))] md:bottom-8 rounded-sm">
+      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#b0b0b0] mb-4">
+        Intensidad Penal
       </p>
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-2">
         {items.map((item) => (
-          <div key={item.color} className="flex items-center gap-2">
+          <div key={item.color} className="flex items-center gap-3">
             <div
-              className="w-3 h-3 rounded-sm flex-shrink-0 border border-slate-200/50"
+              className="w-3 h-3 rounded-full border border-[#f8f8f6]/5 shrink-0"
               style={{ backgroundColor: item.color }}
             />
-            <span className="text-xs text-slate-600">{item.label}</span>
+            <span className="text-[10px] font-bold text-[#f8f8f6] tabular-nums whitespace-nowrap">
+              {item.label}
+            </span>
           </div>
         ))}
       </div>

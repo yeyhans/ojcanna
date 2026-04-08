@@ -9,248 +9,76 @@ interface Props {
   source?: InfoSource
 }
 
-const CONTENT: Record<InfoSource, { color: string; sections: { title: string; body: React.ReactNode }[] }> = {
+interface SourceContent {
+  titulo: string
+  sections: { title: string; body: React.ReactNode }[]
+}
+
+const CONTENT: Record<InfoSource, SourceContent> = {
   cead: {
-    color: 'text-blue-600',
+    titulo: 'Logística de Detenciones CEAD',
     sections: [
       {
-        title: 'Origen de los datos',
+        title: 'Definición',
         body: (
           <>
-            Los datos provienen del{' '}
-            <span className="font-medium text-slate-700">CEAD</span>{' '}
-            (Centro de Estudios y Análisis del Delito) de la Subsecretaría de Prevención del Delito.
-            El portal no ofrece descarga masiva, por lo que se realizó una extracción automatizada
-            mediante ingeniería inversa de las peticiones HTTP, iterando sobre cada combinación de
-            año, región y comuna con{' '}
-            <span className="font-mono text-[11px] bg-slate-100 px-1 py-0.5 rounded">httpx</span>{' '}
-            asíncrono y checkpoints para tolerar interrupciones.
+            Instrumento cartográfico que visualiza el despliegue policial frente a la 
+            <span className="font-bold text-[#f8f8f6]"> Ley N° 20.000</span>. 
+            Muestra la densidad de acciones preventivas y reactivas en las 346 comunas de Chile.
           </>
         ),
       },
       {
-        title: '¿Qué son los Casos?',
+        title: 'Vector de Datos',
         body: (
           <>
-            La <span className="font-medium text-slate-700">frecuencia total</span> de hechos
-            policiales registrados bajo la Ley N° 20.000 (drogas) en la comuna para el año y
-            subgrupos de delitos seleccionados en los filtros.
+            Extraído del <span className="font-bold text-[#f8f8f6]">CEAD</span> (SPD). 
+            Procesado mendiante ingeniería inversa sobre APIs gubernamentales con 
+            validación asíncrona y normalización INE.
           </>
-        ),
-      },
-      {
-        title: '¿Qué es la tasa por 100k hab.?',
-        body: (
-          <>
-            Los casos normalizados por la{' '}
-            <span className="font-medium text-slate-700">población comunal</span> (proyección INE),
-            expresados por cada 100.000 habitantes. Permite comparar comunas de tamaños muy distintos
-            sin que las más grandes distorsionen el mapa.
-          </>
-        ),
-      },
-      {
-        title: 'Contribuidores',
-        body: (
-          <ul className="flex flex-col gap-1.5">
-            {[
-              { label: 'Datos delictuales', value: 'CEAD / Subsecretaría de Prevención del Delito' },
-              { label: 'Geometrías',        value: 'GADM v4.1' },
-              { label: 'Cartografía base',  value: '© CARTO, © OpenStreetMap contributors' },
-              { label: 'Motor de mapas',    value: 'MapLibre GL JS' },
-              { label: 'Plataforma',        value: 'dispensai.cl' },
-            ].map(({ label, value }) => (
-              <li key={label} className="flex items-baseline gap-2">
-                <span className="text-[11px] font-medium text-slate-400 shrink-0 w-28">{label}</span>
-                <span className="text-xs text-slate-600">{value}</span>
-              </li>
-            ))}
-          </ul>
         ),
       },
     ],
   },
-
   dpp: {
-    color: 'text-emerald-600',
+    titulo: 'Defensoría Penal Pública',
     sections: [
       {
-        title: 'Origen de los datos',
+        title: 'Alcance',
         body: (
           <>
-            Los datos provienen del{' '}
-            <span className="font-medium text-slate-700">SIGDP</span> (Sistema de Gestión de la
-            Defensoría Penal Pública). La DPP publica anualmente estadísticas de ingresos, términos
-            y formas de término para causas representadas por defensores públicos.
+            Métricas de judicialización y defensa de imputados por drogas. 
+            Análisis de <span className="font-bold text-[#f8f8f6]">resiliencia legal</span> frente al sistema penal chileno.
           </>
         ),
       },
       {
-        title: 'Granularidad y limitaciones',
-        body: (
-          <>
-            Los datos de{' '}
-            <span className="font-medium text-slate-700">Delitos Ley de Drogas</span> (Ley N° 20.000)
-            están disponibles únicamente a nivel{' '}
-            <span className="font-medium text-slate-700">nacional</span>. No existe desglose comunal
-            ni regional específico para drogas en los registros públicos de la DPP. Los datos
-            regionales que aparecen en este módulo corresponden al{' '}
-            <span className="font-medium text-slate-700">total de causas</span> de todos los delitos
-            (usados como pesos de distribución proporcional).
-          </>
-        ),
-      },
-      {
-        title: 'Formas de término',
-        body: (
-          <>
-            Incluye: Absolución, Condena, Salida Alternativa (suspensión condicional, acuerdo
-            reparatorio), Facultativos (sobreseimiento, archivo provisional), y Derivación a
-            tribunal de familia u otro. El porcentaje refleja la composición del total de causas
-            con término en el año seleccionado.
-          </>
-        ),
-      },
-      {
-        title: 'Contribuidores',
-        body: (
-          <ul className="flex flex-col gap-1.5">
-            {[
-              { label: 'Datos judiciales', value: 'Defensoría Penal Pública (DPP) — SIGDP' },
-              { label: 'Plataforma',       value: 'dispensai.cl' },
-            ].map(({ label, value }) => (
-              <li key={label} className="flex items-baseline gap-2">
-                <span className="text-[11px] font-medium text-slate-400 shrink-0 w-28">{label}</span>
-                <span className="text-xs text-slate-600">{value}</span>
-              </li>
-            ))}
-          </ul>
-        ),
+        title: 'Origen',
+        body: 'Datos extraídos del SIGDP (Defensoría) procesados bajo estándares de transparencia activa.',
       },
     ],
   },
-
   pdi: {
-    color: 'text-purple-600',
+    titulo: 'Inteligencia Policial PDI',
     sections: [
       {
-        title: 'Origen de los datos',
-        body: (
-          <>
-            Los datos provienen de la{' '}
-            <span className="font-medium text-slate-700">PDI</span> (Policía de Investigaciones de
-            Chile) a través de{' '}
-            <span className="font-medium text-slate-700">datos.gob.cl</span>, publicados desde la
-            Base Relacional para Análisis e Información (BRAIN). Incluyen estadísticas de delitos
-            investigados, denuncias recibidas y víctimas registradas bajo la Ley N° 20.000.
-          </>
-        ),
-      },
-      {
-        title: 'Granularidad',
-        body: (
-          <>
-            La PDI publica estos datos a nivel{' '}
-            <span className="font-medium text-slate-700">regional</span> (16 regiones). No existe
-            desglose comunal. Todas las comunas de una región comparten el mismo valor regional.
-            La cobertura actual es 2024.
-          </>
-        ),
-      },
-      {
-        title: 'Categorías disponibles',
-        body: (
-          <>
-            <span className="font-medium text-slate-700">Crímenes y simples delitos Ley N° 20.000</span>{' '}
-            (tráfico, microtráfico, elaboración) y{' '}
-            <span className="font-medium text-slate-700">Consumo de alcohol y drogas en vía pública</span>.
-            Cada categoría se desglosa en tres subcategorías: delitos investigados, denuncias
-            recibidas y víctimas registradas.
-          </>
-        ),
-      },
-      {
-        title: 'Contribuidores',
-        body: (
-          <ul className="flex flex-col gap-1.5">
-            {[
-              { label: 'Datos policiales', value: 'PDI — BRAIN (datos.gob.cl)' },
-              { label: 'Plataforma',       value: 'dispensai.cl' },
-            ].map(({ label, value }) => (
-              <li key={label} className="flex items-baseline gap-2">
-                <span className="text-[11px] font-medium text-slate-400 shrink-0 w-28">{label}</span>
-                <span className="text-xs text-slate-600">{value}</span>
-              </li>
-            ))}
-          </ul>
-        ),
+        title: 'Métrica',
+        body: 'Estadísticas de la Policía de Investigaciones (BRAIN) sobre investigaciones dirigidas y procesos de inteligencia territorial.',
       },
     ],
   },
-
   embudo: {
-    color: 'text-emerald-600',
+    titulo: 'Embudo del Punitivismo',
     sections: [
       {
-        title: '¿Qué es el Embudo del Punitivismo?',
+        title: 'Metodología',
         body: (
           <>
-            Visualiza la cadena de persecución penal por Ley N° 20.000 en tres etapas:{' '}
-            <span className="font-medium text-slate-700">detenciones policiales</span> (CEAD) →{' '}
-            <span className="font-medium text-slate-700">causas en la Defensoría</span> (DPP) →{' '}
-            <span className="font-medium text-slate-700">investigaciones PDI</span>. El objetivo es
-            estimar qué fracción de personas detenidas accede a representación legal pública y
-            cuántas terminan con investigación formal.
+            Correlación algorítmica entre <span className="font-bold text-[#f8f8f6]">Detenciones</span>, 
+            <span className="font-bold text-[#f8f8f6]">Causas</span> e 
+            <span className="font-bold text-[#f8f8f6]">Investigaciones</span>. 
+            Mide la eficiencia y el sesgo de la cadena de custodia legal.
           </>
-        ),
-      },
-      {
-        title: 'Metodología de distribución',
-        body: (
-          <>
-            Los datos DPP de drogas son{' '}
-            <span className="font-medium text-slate-700">nacionales</span> (no tienen desglose
-            regional). Para estimar causas por región se usa distribución proporcional:{' '}
-            <span className="font-mono text-[11px] bg-slate-100 px-1 py-0.5 rounded">
-              causas_región = total_nacional × (peso_región / Σ pesos)
-            </span>{' '}
-            donde el peso regional es el total de imputados de todos los delitos en la DPP. Luego,
-            por comuna:{' '}
-            <span className="font-mono text-[11px] bg-slate-100 px-1 py-0.5 rounded">
-              causas_comuna = causas_región × (det_comuna / det_región)
-            </span>
-          </>
-        ),
-      },
-      {
-        title: 'Interpretación del Ratio',
-        body: (
-          <>
-            El ratio = causas_DPP estimadas / detenciones CEAD. Un valor{' '}
-            <span className="font-medium text-slate-700">&gt; 100%</span> puede ocurrir cuando
-            la distribución regional genera más causas estimadas que detenciones locales (la
-            distribución es proporcional, no exacta). El ratio{' '}
-            <span className="font-medium text-red-600">no es una tasa de condena</span> — mide el
-            acceso a representación legal de la Defensoría, no el resultado judicial.
-          </>
-        ),
-      },
-      {
-        title: 'Fuentes',
-        body: (
-          <ul className="flex flex-col gap-1.5">
-            {[
-              { label: 'Detenciones',      value: 'CEAD / Subsecretaría de Prevención del Delito' },
-              { label: 'Causas',           value: 'Defensoría Penal Pública (DPP) — SIGDP' },
-              { label: 'Investigaciones',  value: 'PDI — BRAIN (datos.gob.cl)' },
-              { label: 'Plataforma',       value: 'dispensai.cl' },
-            ].map(({ label, value }) => (
-              <li key={label} className="flex items-baseline gap-2">
-                <span className="text-[11px] font-medium text-slate-400 shrink-0 w-28">{label}</span>
-                <span className="text-xs text-slate-600">{value}</span>
-              </li>
-            ))}
-          </ul>
         ),
       },
     ],
@@ -258,59 +86,56 @@ const CONTENT: Record<InfoSource, { color: string; sections: { title: string; bo
 }
 
 export function InfoModal({ open, onClose, source = 'cead' }: Props) {
-  const { color, sections } = CONTENT[source]
+  const content = CONTENT[source]
 
   return (
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-slate-900/30 backdrop-blur-[2px]"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-[#f8f8f6]/40 backdrop-blur-sm p-4 sm:p-6"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
         >
           <motion.div
-            className="
-              w-full max-w-sm
-              bg-white/90 backdrop-blur-xl
-              border border-white/40
-              rounded-2xl shadow-2xl shadow-slate-400/20
-              overflow-hidden
-            "
-            initial={{ opacity: 0, scale: 0.97, y: 10 }}
+            className="w-full max-w-lg bg-[#0a0a0a] border border-[#2a2a2a] shadow-2xl overflow-hidden rounded-sm"
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.97, y: 10 }}
-            transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-slate-100">
-              <h2 className="text-sm font-bold text-slate-800">Sobre los datos</h2>
-              <button
+            <div className="p-8 border-b border-[#2a2a2a] flex justify-between items-start">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#5a5a5a] mb-2">Transparencia de Datos</p>
+                <h2 className="text-2xl font-cal text-[#f8f8f6]">{content.titulo}</h2>
+              </div>
+              <button 
                 onClick={onClose}
-                aria-label="Cerrar"
-                className="
-                  w-7 h-7 flex items-center justify-center
-                  rounded-full bg-slate-100 hover:bg-slate-200
-                  text-slate-500 text-lg leading-none
-                  transition-colors shrink-0
-                "
+                className="w-10 h-10 border border-[#2a2a2a] rounded-full flex items-center justify-center hover:bg-[#f8f8f6] hover:text-[#0a0a0a] transition-all font-cal text-xl"
               >
                 ×
               </button>
             </div>
 
-            {/* Content */}
-            <div className="px-5 py-4 flex flex-col gap-5 overflow-y-auto max-h-[75vh]">
-              {sections.map(({ title, body }) => (
-                <section key={title} className="flex flex-col gap-1.5">
-                  <h3 className={`text-xs font-semibold uppercase tracking-wider ${color}`}>
-                    {title}
+            <div className="p-8 space-y-8 bg-[#1a1a1a]/50">
+              {content.sections.map((s, i) => (
+                <div key={i} className="space-y-3">
+                  <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#f8f8f6] flex items-center gap-3">
+                    <span className="w-1.5 h-1.5 bg-[#f8f8f6] rounded-full"></span>
+                    {s.title}
                   </h3>
-                  <div className="text-xs text-slate-600 leading-relaxed">{body}</div>
-                </section>
+                  <div className="text-sm text-[#b0b0b0] leading-relaxed pl-[1.1rem]">
+                    {s.body}
+                  </div>
+                </div>
               ))}
+            </div>
+
+            <div className="p-8 bg-[#0a0a0a] border-t border-[#2a2a2a]">
+               <p className="text-[9px] uppercase tracking-[0.2em] text-[#5a5a5a] text-center">
+                 Observatorio Anonimous Canna · Derechos Reservados 2026
+               </p>
             </div>
           </motion.div>
         </motion.div>

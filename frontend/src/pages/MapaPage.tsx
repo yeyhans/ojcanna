@@ -24,7 +24,7 @@ export default function MapaPage() {
   )
 
   return (
-    <div className="relative w-full h-full overflow-hidden">
+    <div className="relative w-full h-full overflow-hidden bg-[#0a0a0a]">
       <MapaCEAD
         geojson={geojson}
         colorExpression={colorExpression}
@@ -37,19 +37,11 @@ export default function MapaPage() {
       {legendBreaks.length > 0 && <Legend breaks={legendBreaks} />}
 
       {/* Info button */}
-      <div className="absolute top-4 right-4 z-20">
+      <div className="absolute top-6 right-6 z-20">
         <button
           onClick={() => setInfoOpen(true)}
           aria-label="Información sobre los datos"
-          className="
-            w-8 h-8 flex items-center justify-center
-            rounded-full
-            bg-white/70 backdrop-blur-md
-            border border-white/40
-            shadow-md shadow-slate-200/60
-            text-slate-500 hover:text-slate-800
-            text-sm font-semibold transition-colors
-          "
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-[#0a0a0a]/80 backdrop-blur-xl border border-[#2a2a2a] shadow-2xl text-[#f8f8f6] hover:bg-[#f8f8f6] hover:text-[#0a0a0a] transition-all font-cal text-lg"
         >
           i
         </button>
@@ -66,15 +58,12 @@ export default function MapaPage() {
       <InfoModal open={infoOpen} onClose={() => setInfoOpen(false)} />
 
       {error && (
-        <div className="
-          absolute top-16 left-1/2 -translate-x-1/2 z-30
-          bg-red-50 border border-red-200
-          rounded-xl shadow-lg
-          px-4 py-3 flex items-center gap-3
-          max-w-sm
-        ">
-          <span className="text-sm text-red-700 flex-1">{error}</span>
-          <button onClick={retry} className="text-xs font-semibold text-red-600 hover:text-red-800 shrink-0">
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50 bg-[#f8f8f6] text-[#0a0a0a] border border-[#f8f8f6] shadow-2xl px-6 py-4 flex items-center gap-6 rounded-sm">
+          <div className="flex flex-col">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[#5a5a5a]">Error de Red</span>
+            <span className="text-sm font-cal">{error}</span>
+          </div>
+          <button onClick={retry} className="chip bg-[#0a0a0a] text-[#f8f8f6] border-[#0a0a0a] hover:bg-[#1a1a1a]">
             Reintentar
           </button>
         </div>
