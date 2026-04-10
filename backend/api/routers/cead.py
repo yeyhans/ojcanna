@@ -1,4 +1,5 @@
 # backend/api/routers/cead.py
+import hashlib
 import json
 from datetime import datetime
 from pathlib import Path
@@ -56,6 +57,48 @@ async def load_geom_cache(pool: asyncpg.Pool) -> dict[str, dict]:
     return {row["cut"]: json.loads(row["geom"]) for row in rows}
 
 
+async def prewarm_cache(pool: asyncpg.Pool, geom_cache: dict[str, dict]) -> None:
+    """Pre-calienta el _RESPONSE_CACHE con el año más reciente y todos los subgrupos.
+
+    Así el primer usuario real recibe bytes ya serializados desde memoria,
+    sin esperar la query a Neon + serialización Pydantic.
+    """
+    try:
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow("SELECT MAX(anio) AS anio FROM cead_hechos")
+        if row is None or row["anio"] is None:
+            return
+        anio: int = row["anio"]
+        subgrupo_ids = list(SUBGRUPOS_VALIDOS.keys())
+        cache_key = (anio, frozenset(subgrupo_ids))
+        if cache_key in _RESPONSE_CACHE:
+            print(f"[prewarm] Ya en caché: año {anio}. Nada que hacer.")
+            return
+        taxonomy = TAXONOMY_2024 if anio >= TAXONOMY_CUTOFF_YEAR else TAXONOMY_LEGACY
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(_MAPA_SQL, anio, subgrupo_ids, taxonomy)
+        features = [
+            Feature(
+                geometry=geom_cache.get(row["cut"], {}),
+                properties=FeatureProperties(
+                    cut=row["cut"],
+                    nombre=row["nombre"],
+                    tasa_agregada=float(row["tasa_agregada"]),
+                    frecuencia_total=float(row["frecuencia_total"]),
+                ),
+            )
+            for row in rows
+        ]
+        body = FeatureCollection(features=features).model_dump_json().encode()
+        _RESPONSE_CACHE[cache_key] = body
+        print(
+            f"[prewarm] Caché calentado: año {anio}, "
+            f"{len(subgrupo_ids)} subgrupos, {len(body):,} bytes"
+        )
+    except Exception as exc:  # noqa: BLE001
+        print(f"[prewarm] Error (no crítico): {exc}")
+
+
 @router.get("/mapa/cead", response_model=FeatureCollection)
 async def mapa_cead(
     request: Request,
@@ -77,7 +120,7 @@ async def mapa_cead(
     cache_key = (anio, frozenset(subgrupo_ids))
 
     if cache_key in _RESPONSE_CACHE:
-        return _build_response(_RESPONSE_CACHE[cache_key], anio)
+        return _build_response(_RESPONSE_CACHE[cache_key], anio, request)
 
     taxonomy = TAXONOMY_2024 if anio >= TAXONOMY_CUTOFF_YEAR else TAXONOMY_LEGACY
     geom_cache: dict[str, dict] = request.app.state.geom_cache
@@ -99,16 +142,28 @@ async def mapa_cead(
     ]
     body = FeatureCollection(features=features).model_dump_json().encode()
     _RESPONSE_CACHE[cache_key] = body
-    return _build_response(body, anio)
+    return _build_response(body, anio, request)
 
 
-def _build_response(body: bytes, anio: int) -> Response:
+def _build_response(body: bytes, anio: int, request: Request) -> Response:
     current_year = datetime.now().year
     max_age = 3600 if anio >= current_year else 86400
+    etag = f'"{hashlib.md5(body, usedforsecurity=False).hexdigest()}"'
+
+    # Si el cliente ya tiene esta versión → 304 sin body (0 bytes transferidos)
+    if request.headers.get("If-None-Match") == etag:
+        return Response(
+            status_code=304,
+            headers={"ETag": etag, "Cache-Control": f"public, max-age={max_age}"},
+        )
+
     return Response(
         content=body,
         media_type="application/json",
-        headers={"Cache-Control": f"public, max-age={max_age}"},
+        headers={
+            "Cache-Control": f"public, max-age={max_age}",
+            "ETag": etag,
+        },
     )
 
 

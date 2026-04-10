@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
 from api.database import create_pool
-from api.routers.cead import load_geom_cache, router as cead_router
+from api.routers.cead import load_geom_cache, prewarm_cache, router as cead_router
 from api.routers.dpp import router as dpp_router
 from api.routers.pdi import router as pdi_router
 from api.routers.embudo import router as embudo_router
@@ -17,6 +17,7 @@ from api.routers.embudo import router as embudo_router
 async def lifespan(app: FastAPI):
     app.state.pool = await create_pool()
     app.state.geom_cache = await load_geom_cache(app.state.pool)
+    await prewarm_cache(app.state.pool, app.state.geom_cache)
     yield
     await app.state.pool.close()
 
