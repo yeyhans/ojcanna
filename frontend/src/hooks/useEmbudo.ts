@@ -1,5 +1,6 @@
 // frontend/src/hooks/useEmbudo.ts
 import { useEffect, useState } from 'react'
+import { urlCache } from '../store/urlCache'
 
 export interface EtapaEmbudo {
   etapa: string
@@ -75,29 +76,46 @@ interface UseEmbudoRankingResult {
 }
 
 export function useEmbudoRanking(anio: number | null): UseEmbudoRankingResult {
-  const [items, setItems] = useState<RankingItem[]>([])
+  const url = anio ? `/api/v1/embudo/ranking?anio=${anio}` : null
+
+  // Inicialización sincrónica desde cache
+  const [items, setItems] = useState<RankingItem[]>(() => {
+    if (!url) return []
+    const cached = urlCache.get<{ anio: number; items: RankingItem[] }>(url)
+    return cached?.items ?? []
+  })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!anio) return
-    const controller = new AbortController()
+    if (!url) return
+
+    // Cache hit → no fetch necesario
+    const cached = urlCache.get<{ anio: number; items: RankingItem[] }>(url)
+    if (cached) {
+      setItems(cached.items)
+      return
+    }
+
+    let active = true
     setIsLoading(true)
     setError(null)
 
-    fetch(`/api/v1/embudo/ranking?anio=${anio}`, { signal: controller.signal })
-      .then((res) => {
-        if (!res.ok) throw new Error(`Error ${res.status}`)
-        return res.json() as Promise<{ anio: number; items: RankingItem[] }>
+    urlCache.fetch<{ anio: number; items: RankingItem[] }>(url)
+      .then((d) => {
+        if (!active) return
+        if (d) setItems(d.items)
+        else setError('Error al cargar el ranking')
+        setIsLoading(false)
       })
-      .then((d) => setItems(d.items))
       .catch((err: Error) => {
-        if (err.name !== 'AbortError') setError(err.message)
+        if (!active) return
+        setError(err.message)
+        setIsLoading(false)
       })
-      .finally(() => setIsLoading(false))
 
-    return () => controller.abort()
-  }, [anio])
+    return () => { active = false }
+  }, [url])
 
   return { items, isLoading, error }
 }
