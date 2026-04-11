@@ -8,6 +8,20 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+    <!-- Acorta el camino crítico: TCP+TLS al backend y al CDN del basemap se
+         abren mientras Vite aún parsea main.tsx. -->
+    <link rel="preconnect" href="https://ojcanna.onrender.com" crossorigin />
+    <link rel="preconnect" href="https://basemaps.cartocdn.com" crossorigin />
+
+    <!-- Pre-fetch del par crítico: filtros y geometrías. La respuesta llega
+         al cache HTTP del browser; cuando el JS hace fetch() encuentra el
+         buffer servido sin nueva ida al servidor. -->
+    <link rel="preload" as="fetch" href="/api/v1/cead/filtros" crossorigin />
+    <link rel="preload" as="fetch" href="/api/v1/cead/geometrias" crossorigin />
+
+    <!-- Preload de la fuente para evitar FOUT del título principal -->
+    <link rel="preload" as="font" type="font/ttf" href="/fonts/CalSans-Regular.ttf" crossorigin />
   </head>
   <body>
     <div id="root"></div>

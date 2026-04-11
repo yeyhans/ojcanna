@@ -21,11 +21,17 @@ from api.schemas.pdi import (
     PdiRegionItem,
     PdiSerieResponse,
     PdiSeriePunto,
+    PdiStatsItem,
+    PdiStatsResponse,
 )
 
 router = APIRouter(prefix="/api/v1", tags=["pdi"])
 
+# Cache de FeatureCollection serializado (legacy /mapa/pdi)
 _RESPONSE_CACHE: dict[tuple, bytes] = {}
+
+# Cache de stats (sin geometrías)
+_STATS_CACHE: dict[tuple, bytes] = {}
 
 _MAPA_SQL = """
 SELECT
@@ -47,7 +53,8 @@ _ANIOS_SQL = "SELECT DISTINCT anio FROM datosgob_seguridad ORDER BY anio"
 _CATS_SQL  = "SELECT DISTINCT categoria FROM datosgob_seguridad ORDER BY categoria"
 
 
-@router.get("/mapa/pdi", response_model=PdiFeatureCollection)
+# DEPRECATED: usar /api/v1/cead/geometrias + /api/v1/pdi/stats. Mantenido por compat.
+@router.get("/mapa/pdi", response_model=PdiFeatureCollection, deprecated=True)
 async def mapa_pdi(
     request: Request,
     anio: int = Query(..., ge=2020, le=2030),
@@ -95,6 +102,45 @@ def _build_response(body: bytes, anio: int) -> Response:
         media_type="application/json",
         headers={"Cache-Control": f"public, max-age={max_age}"},
     )
+
+
+@router.get("/pdi/stats", response_model=PdiStatsResponse)
+async def pdi_stats(
+    anio: int = Query(..., ge=2020, le=2030),
+    categoria: str = Query(..., description="Categoría de delito (ej: 'Tráfico de drogas')"),
+    pool: asyncpg.Pool = Depends(get_pool),
+) -> Response:
+    """Devuelve sólo `[{cut, region_id, frecuencia, tiene_datos}]`. Sin geometrías:
+    el frontend cruza con `/cead/geometrias` (compartido entre CEAD/DPP/PDI)."""
+    cache_key = (anio, categoria.lower())
+    if cache_key in _STATS_CACHE:
+        return _build_response(_STATS_CACHE[cache_key], anio)
+
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(_MAPA_SQL, anio, f"%{categoria}%")
+
+    if not rows:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Sin datos PDI para año {anio} y categoría '{categoria}'. "
+                   "Ejecuta: python -m etl.pdi.runner --db-url $DATABASE_URL",
+        )
+
+    stats = [
+        PdiStatsItem(
+            cut=row["cut"],
+            nombre=row["nombre"],
+            region_id=row["region_id"],
+            frecuencia=float(row["frecuencia"]),
+            tiene_datos=bool(row["tiene_datos"]),
+        )
+        for row in rows
+    ]
+    body = PdiStatsResponse(
+        anio=anio, categoria=categoria, stats=stats
+    ).model_dump_json().encode()
+    _STATS_CACHE[cache_key] = body
+    return _build_response(body, anio)
 
 
 @router.get("/pdi/filtros", response_model=PdiFiltrosResponse)

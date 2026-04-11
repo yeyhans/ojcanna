@@ -32,6 +32,20 @@ class DppFeatureCollection(BaseModel):
     features: list[DppFeature]
 
 
+# Stats split: solo datos numéricos (sin geometrías)
+class DppStatsItem(BaseModel):
+    cut: str
+    nombre: str
+    region_id: str
+    n_causas: float
+    tiene_datos: bool
+
+
+class DppStatsResponse(BaseModel):
+    anio: int
+    stats: list[DppStatsItem]
+
+
 # --- Analytics ---
 
 class FormaTermino(BaseModel):

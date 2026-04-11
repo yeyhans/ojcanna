@@ -30,3 +30,17 @@ class Feature(BaseModel):
 class FeatureCollection(BaseModel):
     type: Literal["FeatureCollection"] = "FeatureCollection"
     features: list[Feature]
+
+
+# Stats split: solo datos numéricos (las geometrías van por /cead/geometrias)
+class StatsItem(BaseModel):
+    cut: str
+    nombre: str
+    tasa_agregada: float
+    frecuencia_total: float
+
+
+class StatsResponse(BaseModel):
+    anio: int
+    subgrupos: list[str]
+    stats: list[StatsItem]

@@ -1,21 +1,40 @@
 // frontend/src/store/dataStore.ts
 //
-// Singleton de caché con dos capas:
-//   1. Memoria (_memCache)   — instantáneo, vive mientras la tab está abierta
-//   2. sessionStorage        — sobrevive refresh de página, se limpia al cerrar la tab
+// Cache de FeatureCollections CEAD listos para MapLibre.
 //
-// Deduplicación de in-flight: si dos partes de la app piden la misma URL
-// al mismo tiempo, solo se hace UNA request de red.
+// El cambio importante respecto a la versión anterior:
+//   - Antes: una sola request a /api/v1/mapa/cead que devolvía geom + stats juntos
+//     (~500KB–1MB por combinación de filtros).
+//   - Ahora: dos requests paralelas (geometrías estáticas vía geomStore +
+//     /api/v1/cead/stats ligero ~10KB) que se mergean en el cliente.
+//
+// API pública (`get`/`set`/`prefetch`) sin cambios → useCeadMapa.ts no necesita
+// modificarse. La memoria cachea el feature collection ya merged para que
+// los re-renders sean instantáneos.
 
-import type { CeadFeatureCollection } from '../types/cead'
+import type { CeadFeatureCollection, CeadFeatureProperties } from '../types/cead'
+import { fetchComunasGeom, mergeGeomWithStats } from './geomStore'
 
 const SESSION_PREFIX = 'obs_cead_'
 
-// ── Caché en memoria ────────────────────────────────────────────────────────
+// ── Caché en memoria del FeatureCollection merged ───────────────────────────
 const _memCache = new Map<string, CeadFeatureCollection>()
 
-// ── In-flight promises (evita requests duplicadas para la misma key) ─────────
+// ── In-flight promises (dedup de requests por la misma combinación) ──────────
 const _inflight = new Map<string, Promise<CeadFeatureCollection | null>>()
+
+// ── Stats response shape (ver backend/api/schemas/cead.py:StatsResponse) ─────
+interface StatsItemDTO {
+  cut: string
+  nombre: string
+  tasa_agregada: number
+  frecuencia_total: number
+}
+interface StatsResponseDTO {
+  anio: number
+  subgrupos: string[]
+  stats: StatsItemDTO[]
+}
 
 // ── Helpers de clave ─────────────────────────────────────────────────────────
 export function buildCacheKey(anio: number, subgrupos: string[]): string {
@@ -23,12 +42,12 @@ export function buildCacheKey(anio: number, subgrupos: string[]): string {
   return `${anio}_${[...subgrupos].sort().join(',')}`
 }
 
-export function buildApiUrl(anio: number, subgrupos: string[]): string {
+export function buildStatsUrl(anio: number, subgrupos: string[]): string {
   const params = new URLSearchParams({
     anio: String(anio),
     subgrupos: subgrupos.join(','),
   })
-  return `/api/v1/mapa/cead?${params}`
+  return `/api/v1/cead/stats?${params}`
 }
 
 // ── sessionStorage helpers ────────────────────────────────────────────────────
@@ -54,12 +73,28 @@ export function hasAnySessionData(): boolean {
   try {
     for (let i = 0; i < sessionStorage.length; i++) {
       const k = sessionStorage.key(i)
+      // El splash se salta si HAY geometrías cacheadas (segunda visita)
+      if (k === 'obs_geom_v1') return true
       if (k?.startsWith(SESSION_PREFIX)) return true
     }
     return false
   } catch {
     return false
   }
+}
+
+// ── Merge helpers ─────────────────────────────────────────────────────────────
+function buildStatsByCut(stats: StatsItemDTO[]): Map<string, CeadFeatureProperties> {
+  const map = new Map<string, CeadFeatureProperties>()
+  for (const s of stats) {
+    map.set(s.cut, {
+      cut: s.cut,
+      nombre: s.nombre,
+      tasa_agregada: s.tasa_agregada,
+      frecuencia_total: s.frecuencia_total,
+    })
+  }
+  return map
 }
 
 // ── API pública ────────────────────────────────────────────────────────────────
@@ -91,10 +126,8 @@ export const dataStore = {
   },
 
   /**
-   * Pre-fetch + caché. Retorna una Promise que:
-   *   - Resuelve instantáneamente si ya hay datos en memoria/sessionStorage.
-   *   - Comparte la Promise en vuelo si ya hay una request en curso (dedup).
-   *   - Guarda automáticamente en caché cuando la red responde.
+   * Pre-fetch + merge + caché. Resuelve instantáneamente si ya está cacheado.
+   * Hace `Promise.all([geom, stats])` en paralelo cuando hay miss.
    */
   prefetch(anio: number, subgrupos: string[]): Promise<CeadFeatureCollection | null> {
     // 1. Caché hit
@@ -107,16 +140,29 @@ export const dataStore = {
     const existing = _inflight.get(key)
     if (existing) return existing
 
-    // 3. Nueva request
-    const url = buildApiUrl(anio, subgrupos)
-    const promise = fetch(url)
-      .then((res) => {
+    // 3. Nueva request: geom + stats en paralelo
+    const url = buildStatsUrl(anio, subgrupos)
+    const promise = Promise.all([
+      fetchComunasGeom(),
+      fetch(url).then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        return res.json() as Promise<CeadFeatureCollection>
-      })
-      .then((data) => {
-        this.set(anio, subgrupos, data)
-        return data
+        return res.json() as Promise<StatsResponseDTO>
+      }),
+    ])
+      .then(([geomMap, statsResp]) => {
+        const statsByCut = buildStatsByCut(statsResp.stats)
+        const fc = mergeGeomWithStats<CeadFeatureProperties>(
+          geomMap,
+          statsByCut,
+          (cut) => ({
+            cut,
+            nombre: '',
+            tasa_agregada: 0,
+            frecuencia_total: 0,
+          }),
+        ) as CeadFeatureCollection
+        this.set(anio, subgrupos, fc)
+        return fc
       })
       .catch(() => null)
       .finally(() => _inflight.delete(key))

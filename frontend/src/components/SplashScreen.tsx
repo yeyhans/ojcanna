@@ -9,35 +9,14 @@
 // Se oculta con un fade-out suave cuando isAppReady = true.
 
 import { AnimatePresence, motion } from 'framer-motion'
-import { useEffect, useState } from 'react'
 
 interface SplashScreenProps {
   visible: boolean
+  /** 0-100, pasos reales: 33% filtros · 66% geometrías · 100% stats */
+  progress: number
 }
 
-export function SplashScreen({ visible }: SplashScreenProps) {
-  const [progress, setProgress] = useState(0)
-
-  // Anima de 0 → ~85% mientras carga, luego salta a 100% cuando termina
-  useEffect(() => {
-    if (!visible) return
-    let val = 0
-    const id = setInterval(() => {
-      val += Math.random() * 9 + 2
-      if (val >= 85) {
-        clearInterval(id)
-        setProgress(85)
-        return
-      }
-      setProgress(val)
-    }, 110)
-    return () => clearInterval(id)
-  }, [visible])
-
-  useEffect(() => {
-    if (!visible) setProgress(100)
-  }, [visible])
-
+export function SplashScreen({ visible, progress }: SplashScreenProps) {
   return (
     <AnimatePresence>
       {visible && (

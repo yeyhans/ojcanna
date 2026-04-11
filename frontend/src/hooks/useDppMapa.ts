@@ -1,12 +1,58 @@
 // frontend/src/hooks/useDppMapa.ts
-// Fetch del mapa DPP con cache global (urlCache) y debounce 300ms.
+// Fetch del mapa DPP usando el split geom + stats:
+//   - Geometrías: singleton cargado una sola vez por sesión (geomStore).
+//   - Stats DPP: payload ligero ~5KB por año, cacheado en urlCache.
+// El merge se hace en el cliente. Debounce 300ms.
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ExpressionSpecification } from 'maplibre-gl'
 import { buildLegendBreaks, buildStepExpression } from '../lib/colorScale'
-import type { DppFeatureCollection } from '../types/dpp'
+import type { DppFeatureCollection, DppFeatureProperties } from '../types/dpp'
 import { urlCache } from '../store/urlCache'
+import { fetchComunasGeom, mergeGeomWithStats, type GeomFeature } from '../store/geomStore'
 
 const VALUE_PROPERTY = 'n_causas'
+
+interface DppStatsItemDTO {
+  cut: string
+  nombre: string
+  region_id: string
+  n_causas: number
+  tiene_datos: boolean
+}
+interface DppStatsResponseDTO {
+  anio: number
+  stats: DppStatsItemDTO[]
+}
+
+// Cache de FeatureCollection merged para DPP, keyed por anio.
+const _dppMergedCache = new Map<number, DppFeatureCollection>()
+
+function mergeDppStats(
+  geomMap: Map<string, GeomFeature>,
+  statsResp: DppStatsResponseDTO,
+): DppFeatureCollection {
+  const byCut = new Map<string, DppFeatureProperties>()
+  for (const s of statsResp.stats) {
+    byCut.set(s.cut, {
+      cut: s.cut,
+      nombre: s.nombre,
+      region_id: s.region_id,
+      n_causas: s.n_causas,
+      tiene_datos: s.tiene_datos,
+    })
+  }
+  return mergeGeomWithStats<DppFeatureProperties>(
+    geomMap,
+    byCut,
+    (cut) => ({
+      cut,
+      nombre: '',
+      region_id: '',
+      n_causas: 0,
+      tiene_datos: false,
+    }),
+  ) as DppFeatureCollection
+}
 
 interface UseDppMapaResult {
   geojson: DppFeatureCollection | null
@@ -27,35 +73,46 @@ export function useDppMapa(anio: number | null): UseDppMapaResult {
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const apply = useCallback((data: DppFeatureCollection) => {
+    setGeojson(data)
+    setColorExpression(buildStepExpression(data.features, VALUE_PROPERTY))
+    setLegendBreaks(buildLegendBreaks(data.features, VALUE_PROPERTY))
+  }, [])
+
   const fetchData = useCallback(() => {
     if (anio === null) return
 
-    const url = `/api/v1/mapa/dpp?anio=${anio}`
-
-    // Cache global: memoria → sessionStorage
-    const cached = urlCache.get<DppFeatureCollection>(url)
-    if (cached) {
-      setGeojson(cached)
-      setColorExpression(buildStepExpression(cached.features, VALUE_PROPERTY))
-      setLegendBreaks(buildLegendBreaks(cached.features, VALUE_PROPERTY))
+    // 1. Cache hit del FeatureCollection ya merged
+    const cachedMerged = _dppMergedCache.get(anio)
+    if (cachedMerged) {
+      apply(cachedMerged)
+      setIsLoading(false)
+      setError(null)
       return
     }
 
     setIsLoading(true)
     setError(null)
 
-    urlCache.fetch<DppFeatureCollection>(url)
-      .then((data) => {
-        if (!data) { setError('Error al cargar los datos DPP'); return }
-        setGeojson(data)
-        setColorExpression(buildStepExpression(data.features, VALUE_PROPERTY))
-        setLegendBreaks(buildLegendBreaks(data.features, VALUE_PROPERTY))
+    const statsUrl = `/api/v1/dpp/stats?anio=${anio}`
+    Promise.all([
+      fetchComunasGeom(),
+      urlCache.fetch<DppStatsResponseDTO>(statsUrl),
+    ])
+      .then(([geomMap, statsResp]) => {
+        if (!statsResp) {
+          setError('Error al cargar los datos DPP')
+          return
+        }
+        const merged = mergeDppStats(geomMap, statsResp)
+        _dppMergedCache.set(anio, merged)
+        apply(merged)
       })
       .catch((err: Error) => {
         setError(err.message ?? 'Error al cargar los datos DPP')
       })
       .finally(() => setIsLoading(false))
-  }, [anio, retryCount]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [anio, retryCount, apply]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)

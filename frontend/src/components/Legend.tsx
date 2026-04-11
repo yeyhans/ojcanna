@@ -1,8 +1,8 @@
 // frontend/src/components/Legend.tsx
 import { PALETTE, NO_DATA } from '../lib/colorScale'
 
-export function Legend({ breaks }: { breaks: number[] }) {
-  if (breaks.length === 0) return null
+export function Legend({ breaks, hidden = false }: { breaks: number[]; hidden?: boolean }) {
+  if (breaks.length === 0 || hidden) return null
 
   const items = [
     { color: NO_DATA, label: 'SIN REGISTRO' },

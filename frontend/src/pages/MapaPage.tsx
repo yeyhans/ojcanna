@@ -5,23 +5,16 @@ import { MapaCEAD } from '../components/MapaCEAD'
 import { FilterPanel } from '../components/FilterPanel'
 import { Legend } from '../components/Legend'
 import { InfoModal } from '../components/InfoModal'
-import { EmbudoPanel } from '../components/EmbudoPanel'
 import { useCeadMapa } from '../hooks/useCeadMapa'
-import { useEmbudo } from '../hooks/useEmbudo'
 
 export default function MapaPage() {
   const [anio, setAnio] = useState<number | null>(null)
   const [subgrupos, setSubgrupos] = useState<string[] | null>(null)
   const [infoOpen, setInfoOpen] = useState(false)
-  const [selectedComuna, setSelectedComuna] = useState<{ cut: string; nombre: string } | null>(null)
+  const [filterExpanded, setFilterExpanded] = useState(false)
 
   const { geojson, colorExpression, legendBreaks, isLoading, error, retry } =
     useCeadMapa(anio, subgrupos ?? [])
-
-  const { data: embudoData, isLoading: embudoLoading } = useEmbudo(
-    anio,
-    selectedComuna?.cut ?? null
-  )
 
   return (
     <div className="relative w-full h-full overflow-hidden bg-[#0a0a0a]">
@@ -29,12 +22,14 @@ export default function MapaPage() {
         geojson={geojson}
         colorExpression={colorExpression}
         isLoading={isLoading}
-        onComunaSelect={(cut, nombre) => setSelectedComuna({ cut, nombre })}
       />
 
-      <FilterPanel onChange={(a, s) => { setAnio(a); setSubgrupos(s) }} />
+      <FilterPanel
+        onChange={(a, s) => { setAnio(a); setSubgrupos(s) }}
+        onExpandedChange={setFilterExpanded}
+      />
 
-      {legendBreaks.length > 0 && <Legend breaks={legendBreaks} />}
+      {legendBreaks.length > 0 && <Legend breaks={legendBreaks} hidden={filterExpanded} />}
 
       {/* Info button */}
       <div className="absolute top-6 right-6 z-20">
@@ -46,14 +41,6 @@ export default function MapaPage() {
           i
         </button>
       </div>
-
-      <EmbudoPanel
-        comunaNombre={selectedComuna?.nombre ?? null}
-        anio={anio}
-        etapas={embudoData?.etapas ?? []}
-        isLoading={embudoLoading}
-        onClose={() => setSelectedComuna(null)}
-      />
 
       <InfoModal open={infoOpen} onClose={() => setInfoOpen(false)} />
 

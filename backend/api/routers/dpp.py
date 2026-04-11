@@ -23,13 +23,18 @@ from api.schemas.dpp import (
     DppSeriePunto,
     DppRegionesResponse,
     DppRegion,
+    DppStatsItem,
+    DppStatsResponse,
     FormaTermino,
 )
 
 router = APIRouter(prefix="/api/v1", tags=["dpp"])
 
-# Cache de respuestas, keyed por anio
+# Cache de FeatureCollection serializado (legacy /mapa/dpp), keyed por anio
 _RESPONSE_CACHE: dict[int, bytes] = {}
+
+# Cache de stats (sin geometrías), keyed por anio
+_STATS_CACHE: dict[int, bytes] = {}
 
 # Consulta principal: une comunas con dpp_causas a nivel regional
 # Todas las comunas de la misma región reciben el mismo n_causas
@@ -51,7 +56,8 @@ ORDER BY c.cut
 _ANIOS_SQL = "SELECT DISTINCT anio FROM dpp_causas ORDER BY anio"
 
 
-@router.get("/mapa/dpp", response_model=DppFeatureCollection)
+# DEPRECATED: usar /api/v1/cead/geometrias + /api/v1/dpp/stats. Mantenido por compat.
+@router.get("/mapa/dpp", response_model=DppFeatureCollection, deprecated=True)
 async def mapa_dpp(
     request: Request,
     anio: int = Query(..., ge=2020, le=2030, description="Año a consultar"),
@@ -97,6 +103,41 @@ def _build_response(body: bytes, anio: int) -> Response:
         media_type="application/json",
         headers={"Cache-Control": f"public, max-age={max_age}"},
     )
+
+
+@router.get("/dpp/stats", response_model=DppStatsResponse)
+async def dpp_stats(
+    anio: int = Query(..., ge=2020, le=2030, description="Año a consultar"),
+    pool: asyncpg.Pool = Depends(get_pool),
+) -> Response:
+    """Devuelve sólo `[{cut, region_id, n_causas, tiene_datos}]`. Sin geometrías:
+    el frontend cruza con `/cead/geometrias` (compartido entre CEAD/DPP/PDI)."""
+    if anio in _STATS_CACHE:
+        return _build_response(_STATS_CACHE[anio], anio)
+
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(_MAPA_SQL, anio)
+
+    if not rows:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No hay datos DPP para el año {anio}. "
+                   "Ejecuta el ETL: python -m etl.dpp.runner --db-url $DATABASE_URL",
+        )
+
+    stats = [
+        DppStatsItem(
+            cut=row["cut"],
+            nombre=row["nombre"],
+            region_id=row["region_id"],
+            n_causas=float(row["n_causas"]),
+            tiene_datos=bool(row["tiene_datos"]),
+        )
+        for row in rows
+    ]
+    body = DppStatsResponse(anio=anio, stats=stats).model_dump_json().encode()
+    _STATS_CACHE[anio] = body
+    return _build_response(body, anio)
 
 
 @router.get("/dpp/filtros", response_model=DppFiltrosResponse)

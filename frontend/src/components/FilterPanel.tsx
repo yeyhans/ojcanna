@@ -1,35 +1,47 @@
 // frontend/src/components/FilterPanel.tsx
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, useMotionValue } from 'framer-motion'
-import type { FiltrosResponse, SubgrupoItem } from '../types/cead'
 import { SubgrupoCheckbox } from './SubgrupoCheckbox'
 import { useIsMobile } from '../hooks/useIsMobile'
+import { useAppData } from '../providers/AppDataProvider'
 
 const SNAP_COLLAPSED = 64
 const getSnapHalf = () => window.innerHeight * 0.4
 const getSnapFull = () => window.innerHeight * 0.85
 
-export function FilterPanel({ onChange }: { onChange: (anio: number, subgrupos: string[]) => void }) {
+interface FilterPanelProps {
+  onChange: (anio: number, subgrupos: string[]) => void
+  onExpandedChange?: (expanded: boolean) => void
+}
+
+export function FilterPanel({ onChange, onExpandedChange }: FilterPanelProps) {
   const isMobile = useIsMobile()
-  const [filtros, setFiltros] = useState<FiltrosResponse | null>(null)
+  // Filtros vienen del AppDataProvider — ya está cacheado y listo después del splash.
+  // No re-fetcheamos aquí (antes hacía un fetch duplicado en el camino crítico).
+  const { filtros } = useAppData()
   const [anio, setAnio] = useState<number>(2024)
   const [subgruposSeleccionados, setSubgruposSeleccionados] = useState<string[]>([])
   const [sheetHeight, setSheetHeight] = useState(SNAP_COLLAPSED)
   const dragY = useMotionValue(0)
+  const initializedRef = useRef(false)
 
+  // Notifica al padre cuando el sheet está expandido (half o full)
+  // para que componentes como Legend puedan ocultarse y no tapar los filtros.
   useEffect(() => {
-    fetch('/api/v1/cead/filtros')
-      .then((r) => r.json() as Promise<FiltrosResponse>)
-      .then((data) => {
-        setFiltros(data)
-        const latestAnio = Math.max(...data.anios)
-        setAnio(latestAnio)
-        const allIds = data.subgrupos.map((s: SubgrupoItem) => s.id)
-        setSubgruposSeleccionados(allIds)
-        onChange(latestAnio, allIds)
-      })
-      .catch(console.error)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    if (!onExpandedChange) return
+    onExpandedChange(isMobile && sheetHeight > SNAP_COLLAPSED + 10)
+  }, [sheetHeight, isMobile, onExpandedChange])
+
+  // Inicialización one-shot cuando filtros está disponible
+  useEffect(() => {
+    if (initializedRef.current || !filtros) return
+    initializedRef.current = true
+    const latestAnio = Math.max(...filtros.anios)
+    const allIds = filtros.subgrupos.map((s) => s.id)
+    setAnio(latestAnio)
+    setSubgruposSeleccionados(allIds)
+    onChange(latestAnio, allIds)
+  }, [filtros, onChange])
 
   const handleAnioChange = (newAnio: number) => {
     setAnio(newAnio)

@@ -29,6 +29,21 @@ class PdiFeatureCollection(BaseModel):
     features: list[PdiFeature]
 
 
+# Stats split: solo datos numéricos
+class PdiStatsItem(BaseModel):
+    cut: str
+    nombre: str
+    region_id: str
+    frecuencia: float
+    tiene_datos: bool
+
+
+class PdiStatsResponse(BaseModel):
+    anio: int
+    categoria: str
+    stats: list[PdiStatsItem]
+
+
 # --- Analytics ---
 
 class PdiCategoria(BaseModel):

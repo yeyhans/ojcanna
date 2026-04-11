@@ -1,4 +1,7 @@
 // frontend/src/components/MapaCEAD.tsx
+// Import local del CSS de MapLibre: Vite lo incluye en el chunk del mapa (no
+// en el bundle inicial), reduciendo el tamaño del primer paint.
+import 'maplibre-gl/dist/maplibre-gl.css'
 import { useCallback, useRef, useState } from 'react'
 import type { ExpressionSpecification, MapLayerMouseEvent } from 'maplibre-gl'
 import Map, { Layer, Source } from 'react-map-gl/maplibre'
