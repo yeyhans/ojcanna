@@ -28,8 +28,9 @@ import { fetchComunasGeom } from '../store/geomStore'
 import { urlCache } from '../store/urlCache'
 
 // Tiempo mínimo que el splash queda visible aunque la data ya esté cacheada.
-// Subir si querés que la presentación sea más larga; bajar a 0 para velocidad pura.
-const SPLASH_MIN_MS = 2500
+// 1500 ms: presentación profesional sin frustrar al usuario. Cuando el splash
+// desaparece, CEAD + DPP + PDI + Embudo ya están hot en caché (ver init()).
+const SPLASH_MIN_MS = 2000
 
 interface AppDataContextValue {
   isAppReady: boolean
@@ -59,7 +60,7 @@ interface IdleDeadline {
 const ric: (cb: (deadline: IdleDeadline) => void, opts?: { timeout: number }) => IdleHandle =
   typeof window !== 'undefined' && 'requestIdleCallback' in window
     ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).requestIdleCallback.bind(window)
+    (window as any).requestIdleCallback.bind(window)
     : (cb) => window.setTimeout(() => cb({ didTimeout: false, timeRemaining: () => 50 }), 1)
 
 function prefetchLazyChunks(): void {
@@ -72,7 +73,7 @@ function prefetchLazyChunks(): void {
     void import('../pages/PdiPage')
   })
   ric(() => {
-    void import('../pages/EmbudoPage')
+    void import('../pages/FiscaliaPage')
   })
 }
 
@@ -81,12 +82,16 @@ function prefetchLazyChunks(): void {
 // que el "último año" de CEAD existe en DPP/PDI — antes generaba 404 ruidosos.
 // Resolvemos primero los filtros de cada dataset y usamos su propio máximo.
 async function prefetchAnalytics(): Promise<void> {
-  const [dppFiltros, pdiFiltros] = await Promise.all([
+  const [dppFiltros, pdiFiltros, fiscaliaFiltros] = await Promise.all([
     urlCache.fetch<{ anios: number[] }>('/api/v1/dpp/filtros'),
     urlCache.fetch<{ anios: number[]; categorias: string[] }>('/api/v1/pdi/filtros'),
+    urlCache.fetch<{ anios: number[] }>('/api/v1/fiscalia/filtros'),
   ])
 
-  const tasks: Promise<unknown>[] = [urlCache.fetch('/api/v1/dpp/serie')]
+  const tasks: Promise<unknown>[] = [
+    urlCache.fetch('/api/v1/dpp/serie'),
+    urlCache.fetch('/api/v1/fiscalia/serie'),
+  ]
 
   if (dppFiltros?.anios?.length) {
     const dppLast = Math.max(...dppFiltros.anios)
@@ -94,13 +99,20 @@ async function prefetchAnalytics(): Promise<void> {
       urlCache.fetch(`/api/v1/dpp/resumen?anio=${dppLast}`),
       urlCache.fetch(`/api/v1/dpp/regiones?anio=${dppLast}`),
       urlCache.fetch(`/api/v1/dpp/stats?anio=${dppLast}`),
-      urlCache.fetch(`/api/v1/embudo/ranking?anio=${dppLast}`),
     )
   }
 
   if (pdiFiltros?.anios?.length) {
     const pdiLast = Math.max(...pdiFiltros.anios)
     tasks.push(urlCache.fetch(`/api/v1/pdi/resumen?anio=${pdiLast}`))
+  }
+
+  if (fiscaliaFiltros?.anios?.length) {
+    const fiscaliaLast = Math.max(...fiscaliaFiltros.anios)
+    tasks.push(
+      urlCache.fetch(`/api/v1/fiscalia/resumen?anio=${fiscaliaLast}`),
+      urlCache.fetch(`/api/v1/fiscalia/regiones?anio=${fiscaliaLast}`),
+    )
   }
 
   await Promise.all(tasks)
@@ -128,15 +140,18 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         if (!res.ok) throw new Error(`filtros: ${res.status}`)
         const data: FiltrosResponse = await res.json()
         setFiltros(data)
-        setProgress(33)
+        setProgress(20)
 
         const lastAnio = Math.max(...data.anios)
         const subgrupos = data.subgrupos.map((s) => s.id)
 
-        // Step 2: geometrías + stats CEAD en PARALELO (no dependen entre sí)
+        // Step 2: TODOS los datasets en paralelo. Cuando el splash desaparezca,
+        // navegar a /dpp, /pdi o /embudo debe mostrar charts instantáneo.
+        // prefetchAnalytics() ya deduplica via urlCache.
         await Promise.all([
-          fetchComunasGeom().then(() => setProgress(66)),
-          dataStore.prefetch(lastAnio, subgrupos),
+          fetchComunasGeom().then(() => setProgress(45)),
+          dataStore.prefetch(lastAnio, subgrupos).then(() => setProgress(70)),
+          prefetchAnalytics().then(() => setProgress(95)),
         ])
         setProgress(100)
       } catch {
@@ -144,8 +159,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         setProgress(100)
       } finally {
         setIsAppReady(true)
-        // Step 3: tareas en idle (no bloquean UI)
-        void prefetchAnalytics()
+        // Step 3: chunks lazy en idle (no bloquean UI)
         prefetchLazyChunks()
 
         // Garantizar duración mínima del splash (modo presentación).

@@ -412,4 +412,211 @@ demográfico o **PJud** para sentencias), seguir este patrón:
 
 ---
 
-*Última actualización: 2026-04-11*
+## 7. Fuentes candidatas verificadas (abril 2026)
+
+Catálogo de fuentes oficiales chilenas **no ingresadas todavía** al observatorio,
+verificadas vía búsqueda web el 13 de abril de 2026. Cada entrada documenta
+organismo, URL oficial, cobertura temporal, granularidad y — lo más importante —
+**cruzabilidad honesta** con las fuentes operativas hoy.
+
+### Regla de oro: política anti-imputación
+
+> **Si dos fuentes no comparten una clave real (comuna, año, tipo_delito…), se
+> muestran por separado con etiqueta explícita. Prohibido distribuir, interpolar o
+> imputar valores para forzar un cruce comunal que el organismo no publica.**
+
+El caso del Embudo del Punitivismo (sección 6), que distribuye proporcionalmente
+DPP y PDI regionales a comunas usando pesos CEAD, es una excepción histórica que
+**no se debe replicar** en nuevas integraciones. Cada ingesta nueva debe respetar
+la granularidad nativa del organismo emisor.
+
+---
+
+### Eje 1 — Judicial / sentencias
+
+#### 1.1 Poder Judicial en Números (PJud)
+- **Organismo:** Corporación Administrativa del Poder Judicial (CAPJ), Subdirección de Estadísticas.
+- **URL portal:** https://numeros.pjud.cl/Inicio
+- **URL descargas:** https://numeros.pjud.cl/Descargas (CSV + XLS)
+- **Cobertura:** desde inicio reforma procesal penal; actualización semestral (último corte dic-2024).
+- **Granularidad:** tribunal + materia + término + año. Nacional + por Corte de Apelaciones. No comunal directo, mapeable a región vía jurisdicción del tribunal.
+- **Formato:** CSV/XLSX abiertos, Ley 20.285.
+- **Aporte:** cierra el embudo con **sentencias reales** (condenas, absoluciones, sobreseimientos) en materia Ley 20.000.
+- **Caveat:** codificación de materia propia del PJud, distinta de subgrupos CEAD. Cruce con CEAD requiere mapeo explícito `materia PJud ↔ subgrupo CEAD`.
+
+#### 1.2 Boletines Estadísticos Ministerio Público
+- **Organismo:** Fiscalía Nacional, Ministerio Público.
+- **URL:** https://www.fiscaliadechile.cl/persecucion-penal/estadisticas
+- **Cobertura:** boletines trimestrales, semestrales, anuales. Boletín 1er semestre 2025 publicado dic-2025.
+- **Granularidad:** causas ingresadas / terminadas / formalizadas por fiscalía regional + categoría de delito. No comunal. No individualizable.
+- **Formato:** PDF + tablas Excel por boletín.
+- **Aporte:** etapa "Ministerio Público" — formalizaciones y términos antes de sentencia. Complementa DPP (defensa) con persecución.
+- **Caveat:** taxonomía Fiscalía ≠ taxonomía DPP. Ambos regionales.
+
+#### 1.3 Portal Unificado de Sentencias (PJud)
+- **URL:** https://www.pjud.cl/portal-unificado-sentencias
+- **Granularidad:** sentencia individual (PDF/HTML), buscable por ROL.
+- **Aporte:** fuente primaria para pipeline NLP futuro (sub-proyecto E). No dataset tabulado.
+
+---
+
+### Eje 2 — Cárceles / personas privadas de libertad
+
+#### 2.1 Estadística General Penitenciaria — Gendarmería
+- **Organismo:** Gendarmería de Chile (Ministerio de Justicia y DDHH).
+- **URL:** https://www.gendarmeria.gob.cl/est_general.html
+- **Reportes mensuales:** https://www.gendarmeria.gob.cl/rep_est_mes.html
+- **Compendios anuales:** https://www.gendarmeria.gob.cl/compendios.html (desde 1991).
+- **Granularidad:** unidad penal + región + tipo de población (imputados, condenados, penas sustitutivas). Desglose por delito incluyendo **Ley 20.000**.
+- **Formato:** XLSX + PDF. Sin API — descarga manual por mes.
+- **Aporte:** etapa FINAL del embudo (ejecución de pena) — hoy ausente del observatorio.
+- **Caveat:** población stock a fecha de corte, no flujo. Sexo/edad sí, RUT no.
+
+#### 2.2 Caracterización de personas privadas de libertad
+- **URL:** https://www.gendarmeria.gob.cl/car_personas_pp.html
+- **Granularidad:** nacional + región, con variables demográficas.
+- **Aporte:** contexto demográfico (sexo, edad, nacionalidad) del stock condenado por Ley 20.000.
+
+---
+
+### Eje 3 — Contexto socioeconómico comunal
+
+#### 3.1 CASEN 2024 — Observatorio Social
+- **Organismo:** Ministerio de Desarrollo Social y Familia.
+- **URL portal:** https://observatorio.ministeriodesarrollosocial.gob.cl/
+- **Resultados 2024:** publicados enero 2026.
+- **Cobertura:** bianual (2013, 2015, 2017, 2020, 2022, 2024).
+- **Granularidad:** hogar/persona (microdato con ponderador) + agregados **comunales oficiales** (SAE — Small Area Estimation).
+- **Variables:** pobreza por ingresos (17.3% nacional 2024), pobreza multidimensional, ingreso autónomo, escolaridad, hacinamiento.
+- **Formato:** microdatos SPSS/Stata + reportes comunales PDF + tablas XLSX.
+- **Aporte:** correlacionar tasa CEAD con pobreza comunal. Abre análisis de desigualdad punitiva.
+- **Cruzabilidad:** ✅ `CUT comuna` = clave primaria compartida con CEAD.
+
+#### 3.2 Censo 2024 — INE
+- **URL:** https://censo2024.ine.gob.cl/
+- **Base publicada:** dic-2025.
+- **Granularidad:** comunal y menor (zona censal).
+- **Variables:** población total, estructura etaria, hogares, migración.
+- **Formato:** CSV/Excel abierto.
+- **Aporte:** denominador oficial correcto para recalcular tasas comunales CEAD.
+- **Cruzabilidad:** ✅ clave `CUT comuna`.
+
+#### 3.3 Proyecciones de Población — INE
+- **URL:** https://www.ine.gob.cl/estadisticas-por-tema/demografia-y-poblacion/proyecciones-de-poblacion
+- **Granularidad:** comunal anual 2002–2035.
+- **Formato:** Excel/CSV.
+- **Aporte:** denominador anual para tasas comunales multi-año.
+
+#### 3.4 SINIM — Sistema Nacional de Información Municipal
+- **Organismo:** SUBDERE.
+- **URL portal:** https://www.sinim.gov.cl/
+- **URL datos:** https://datos.sinim.gov.cl/
+- **Granularidad:** comunal (345 comunas).
+- **Variables:** presupuesto municipal, personal, educación, salud primaria, seguridad ciudadana. Años 2001–actual.
+- **Aporte:** capacidad institucional del municipio como variable de control.
+- **Cruzabilidad:** ✅ `CUT comuna`.
+
+---
+
+### Eje 4 — Salud y uso terapéutico
+
+#### 4.1 SENDA — Estudio Nacional de Drogas en Población General (ENPG)
+- **Organismo:** Servicio Nacional para la Prevención y Rehabilitación del Consumo de Drogas y Alcohol.
+- **URL observatorio:** https://www.senda.gob.cl/estudio-observatorio/poblacion-general/
+- **Biblioteca:** https://bibliodrogas.gob.cl/observatorio/
+- **Estudios recientes:** 14° ENPG (2022), 15° ENPE (2024 escolares), 16° ENPG (2024 población general — presentado dic-2025).
+- **Granularidad:** nacional + regional + algunas comunas grandes del muestreo. **No todas las 345**.
+- **Variables:** prevalencia consumo cannabis (vida, último año, último mes), edad de inicio, autoreporte médico.
+- **Formato:** reportes PDF + bases microdato (bajo registro).
+- **Aporte:** dimensión del consumo cruzada con la dimensión punitiva — comunas/regiones con más prevalencia vs más criminalización.
+- **Cruzabilidad:** ⚠️ regional sí. Comunal solo ciudades muestreadas — **prohibido imputar al resto**.
+
+#### 4.2 SENDA — Estudio Escolar (ENPE)
+- **URL:** https://www.senda.gob.cl/wp-content/uploads/2025/03/Principales-Resultados-15%C2%B0-ENPE.pdf
+- **Granularidad:** nacional + regional.
+- **Aporte:** panorama del consumo adolescente — contrapeso al enfoque punitivo.
+
+#### 4.3 ISP — Registro Sanitario de Productos Farmacéuticos
+- **Organismo:** Instituto de Salud Pública.
+- **URL:** https://registrosanitario.ispch.gob.cl/
+- **Granularidad:** producto farmacéutico individual.
+- **Aporte:** productos de cannabis medicinal con registro sanitario (Sativex y sucesores) — uso legal vs persecución.
+- **Formato:** consulta web, sin API — requiere scraping cuidadoso.
+- **Cruzabilidad:** ❌ no cruza con datos punitivos. Se presenta como sección contextual independiente.
+
+#### 4.4 Farmacias autorizadas — ISP
+- **URL:** https://www.ispch.gob.cl/anamed/establecimientos-farmaceuticos-y-cosmeticos/autorizacion-de-establecimientos/
+- **Granularidad:** establecimiento (dirección).
+- **Aporte:** georeferenciación de farmacias con capacidad magistral — mapa de acceso legal.
+
+---
+
+### Matriz de cruzabilidad
+
+| Fuente nueva | CEAD (comunal) | DPP (regional) | PDI (regional) | Clave de cruce |
+|---|---|---|---|---|
+| PJud sentencias | ⚠️ región vía tribunal | ⚠️ taxonomía distinta | ⚠️ | `region_id, anio, materia` con mapeo explícito |
+| Fiscalía boletines | ❌ no comunal | ✅ región+año | ✅ región+año | `region_id, anio, categoria_delito` |
+| Gendarmería población penal | ❌ no comunal | ⚠️ región+año | ⚠️ | `region_id, anio, Ley 20.000` |
+| CASEN 2024 | ✅ `cut_comuna` | ❌ sin comuna común | ❌ | `cut_comuna, anio_wave` |
+| Censo 2024 / proyecciones INE | ✅ `cut_comuna` | ❌ | ❌ | denominador de tasas CEAD |
+| SINIM | ✅ `cut_comuna` | ❌ | ❌ | `cut_comuna, anio` |
+| SENDA ENPG | ❌ (salvo ciudades muestreadas) | ✅ región | ✅ región | `region_id, anio_estudio` |
+| ISP registros / farmacias | ❌ | ❌ | ❌ | contextual independiente |
+
+Las celdas ❌ **no se cruzan por distribución proporcional ni imputación**. Se
+muestran en vistas separadas con etiqueta clara ("Dato regional — no distribuible
+a comunas", "Dato contextual — no punitivo").
+
+---
+
+### Priorización sugerida (costo vs. beneficio)
+
+1. **Censo 2024 + proyecciones INE** — denominador correcto inmediato para todas las tasas CEAD. Costo bajo, beneficio alto.
+2. **PJud `numeros.pjud.cl/Descargas`** — cierra el embudo con sentencias reales. Costo medio (mapeo taxonómico), beneficio alto.
+3. **Gendarmería compendios** — etapa final del embudo. Costo medio (descarga manual), beneficio alto.
+4. **CASEN 2024 comunal** — eje correlacional socioeconómico. Costo bajo, beneficio analítico alto.
+5. **SENDA ENPG** — contrapunto consumo/punitivismo. Costo medio (microdato bajo registro), beneficio narrativo alto.
+6. **Fiscalía boletines** — valida DPP desde el ángulo persecutor. Costo bajo, beneficio incremental.
+7. **SINIM** — capacidad municipal. Costo medio, beneficio en análisis avanzado.
+
+Cada una de estas será un sub-proyecto con su propio plan de ETL + endpoints +
+UI cuando se active, siguiendo el patrón del Checklist (sección final).
+
+---
+
+## 8. Estado de viabilidad técnica (verificado abril 2026)
+
+Tras validación con WebFetch de cada portal, el estado real de las fuentes §7 es:
+
+### ✅ VIABLES — descarga directa
+
+| Fuente | URL XLSX/XLS directa | Notas |
+|---|---|---|
+| **Fiscalía — Boletín Anual 2024** | `fiscaliadechile.cl/sites/default/files/documentos/Boletin_Anual__2024.xls` | Categoría "Ley 20.000 / Drogas" explícita, 16 regiones |
+| **Fiscalía — Boletín Anual 2025** | `fiscaliadechile.cl/sites/default/files/documentos/Boletín_Anual_2025-20260101_v1.xlsx` | Publicado enero 2026 |
+| **Fiscalía — Boletín 1er Sem 2025** | `fiscaliadechile.cl/sites/default/files/documentos/Boletin_institucional_enero_junio_2025_20250703_v1.xlsx` | — |
+| **INE Proyecciones 2002-2035** | `ine.gob.cl/docs/default-source/proyecciones-de-poblacion/cuadros-estadisticos/base-2017/estimaciones-y-proyecciones-2002-2035-comunas.xlsx` | Base Censo 2017. Actualización Censo 2024 esperada 2º sem 2026. |
+| **CASEN 2024 — Base comunas** | Observatorio MIDESOF, portal `observatorio.ministeriodesarrollosocial.gob.cl/encuesta-casen-2024` | Solo formatos STATA/R/SPSS — requiere `pyreadstat`. Publicado enero 2026, 335 comunas, 78.654 hogares. |
+
+### 🔒 BLOQUEADAS — acceso restringido o formato no-máquina
+
+| Fuente | Razón bloqueo | Acción necesaria |
+|---|---|---|
+| **PJud numeros.pjud.cl/Descargas** | Portal requiere JavaScript renderizado; los 8 boletines PDF identificados NO mencionan Ley 20.000 (cubren homicidios, RPA, VIF, etc.) | Solicitud SAIP formal al Poder Judicial pidiendo dataset de causas Ley 20.000 por tribunal/año/materia |
+| **INE Censo 2024 microdatos** | Solo accesible vía Redatam Web interactivo, sin descarga CSV/XLSX directa | Integrar cliente Redatam (complejo) o esperar publicación tabulada |
+| **Gendarmería — Compendios PDF** | PDFs 2022-2024 son **imágenes escaneadas JPEG embebidas** (2709×1540px), texto NO extraíble | Pipeline OCR con Tesseract (datos de calidad incierta) o descargar reportes mensuales XLSX — pero estos últimos NO tienen desglose por delito Ley 20.000 |
+| **SINIM datos.sinim.gov.cl** | NO publica variables de detenciones ni delitos. Áreas disponibles: Admin/Finanzas, RRHH, Educación, Salud, Social, Desarrollo Territorial, Caracterización Comunal, Género, Cementerio. "Seguridad ciudadana" ausente del portal de datos. | Abandonar — no aporta variables relacionadas al eje punitivo |
+| **SENDA — Microdatos ENPG** | Portal `senda.gob.cl/.../base-de-datos/` devuelve 403. Solicitud formal con justificación de uso requerida. | Solicitud formal a Observatorio Chileno de Drogas. Mientras tanto, parsear tabulados regionales del PDF público ENPG 2022 (URL verificada). |
+| **ISP — Registro Sanitario** | Portal `registrosanitario.ispch.gob.cl` requiere scraping JS dinámico. NO cruzable con punitivismo. | Diferir — baja prioridad; es data contextual no punitiva |
+
+### Política
+
+No se implementa ninguna fuente bloqueada mediante invención ni aproximación. Se
+documentan acá con la razón real y la acción necesaria para desbloquearlas.
+Cuando/si una se desbloquee, se mueve a §8 VIABLES y se abre un sub-proyecto
+propio siguiendo el Checklist final.
+
+---
+
+*Última actualización: 2026-04-14*

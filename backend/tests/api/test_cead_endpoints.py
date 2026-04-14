@@ -17,6 +17,9 @@ BASE = "http://test"
 async def client():
     # Inicializar el pool manualmente (lifespan no se dispara en ASGITransport)
     app.state.pool = await create_pool()
+    # geom_cache requerido por endpoints /mapa/cead deprecados
+    from api.routers.cead import load_geom_cache
+    app.state.geom_cache = await load_geom_cache(app.state.pool)
     try:
         async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
             yield c

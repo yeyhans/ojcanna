@@ -1,12 +1,13 @@
 // frontend/src/hooks/useCachedFetch.ts
 //
-// Drop-in replacement para useFetch que usa urlCache.
+// Drop-in replacement para useFetch que usa urlCache con estrategia
+// stale-while-revalidate:
+//   1. Render 1 sincrónico: sirve cache si existe (0ms, sin spinner).
+//   2. Background: SIEMPRE revalida contra la red.
+//   3. Si el servidor devuelve datos distintos → actualiza state + cache.
 //
-// Diferencia clave con useFetch:
-//   - Inicializa el estado sincrónicamente desde cache en el primer render.
-//   - Si el dato ya fue pre-fetched (por AppDataProvider), isLoading nunca
-//     pasa a true y el componente muestra datos de inmediato.
-//   - Si url cambia, chequea cache antes de ir a la red.
+// Esto garantiza que cuando el backend se actualiza (ej. ETL 2025 agregado)
+// el usuario ve los datos nuevos sin hard-reload, simplemente navegando.
 
 import { useEffect, useState } from 'react'
 import { urlCache } from '../store/urlCache'
@@ -17,8 +18,17 @@ interface CachedFetchResult<T> {
   error: string | null
 }
 
+async function revalidate<T>(url: string): Promise<T | null> {
+  try {
+    const res = await fetch(url)
+    if (!res.ok) return null
+    return (await res.json()) as T
+  } catch {
+    return null
+  }
+}
+
 export function useCachedFetch<T>(url: string | null): CachedFetchResult<T> {
-  // Inicialización sincrónica desde cache → 0ms si el dato ya fue pre-fetched
   const [data, setData] = useState<T | null>(() =>
     url ? urlCache.get<T>(url) : null
   )
@@ -31,36 +41,37 @@ export function useCachedFetch<T>(url: string | null): CachedFetchResult<T> {
       return
     }
 
-    // Chequeo sincrónico — si url cambió y el nuevo dato ya está en cache
+    let active = true
     const cached = urlCache.get<T>(url)
+
+    // Paint inmediato con cache si existe (UX sin spinner)
     if (cached !== null) {
       setData(cached)
       setIsLoading(false)
       setError(null)
-      return
+    } else {
+      setIsLoading(true)
+      setError(null)
     }
 
-    // Fetch necesario
-    let active = true
-    setIsLoading(true)
-    setError(null)
-
-    urlCache
-      .fetch<T>(url)
-      .then((d) => {
-        if (!active) return
-        if (d !== null) {
-          setData(d)
-        } else {
-          setError('Error al cargar los datos')
+    // Siempre revalidar en background — el cache de sessionStorage puede
+    // estar obsoleto si el backend fue actualizado.
+    revalidate<T>(url).then((fresh) => {
+      if (!active) return
+      if (fresh !== null) {
+        const prev = JSON.stringify(cached)
+        const next = JSON.stringify(fresh)
+        if (prev !== next) {
+          urlCache.set(url, fresh)
+          setData(fresh)
         }
         setIsLoading(false)
-      })
-      .catch(() => {
-        if (!active) return
+        setError(null)
+      } else if (cached === null) {
         setError('Error al cargar los datos')
         setIsLoading(false)
-      })
+      }
+    })
 
     return () => {
       active = false

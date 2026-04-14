@@ -9,14 +9,17 @@
 // Se oculta con un fade-out suave cuando isAppReady = true.
 
 import { AnimatePresence, motion } from 'framer-motion'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 interface SplashScreenProps {
   visible: boolean
-  /** 0-100, pasos reales: 33% filtros · 66% geometrías · 100% stats */
+  /** 0-100: 20% filtros · 45% geom · 70% CEAD stats · 95% analytics · 100% done */
   progress: number
 }
 
 export function SplashScreen({ visible, progress }: SplashScreenProps) {
+  const isMobile = useIsMobile()
+  const bgImage = isMobile ? '/obs_canna_mobile.png' : '/obs_canna_desktop.png'
   return (
     <AnimatePresence>
       {visible && (
@@ -35,13 +38,52 @@ export function SplashScreen({ visible, progress }: SplashScreenProps) {
             justifyContent: 'center',
             padding: 'clamp(2rem, 6vw, 5rem)',
             backgroundColor: '#0d0d0d',
-            // Dot grid sutil
-            backgroundImage:
-              'radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px)',
-            backgroundSize: '28px 28px',
             overflow: 'hidden',
           }}
         >
+          {/* Imagen monocromática de fondo — grayscale estricto + opacidad baja */}
+          <img
+            src={bgImage}
+            alt=""
+            aria-hidden
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              filter: 'grayscale(1) brightness(0.55) contrast(1.15)',
+              opacity: 0.38,
+              pointerEvents: 'none',
+              userSelect: 'none',
+            }}
+          />
+
+          {/* Dot grid sutil por encima de la imagen */}
+          <div
+            aria-hidden
+            style={{
+              position: 'absolute',
+              inset: 0,
+              backgroundImage:
+                'radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px)',
+              backgroundSize: '28px 28px',
+              pointerEvents: 'none',
+            }}
+          />
+
+          {/* Vignette oscuro para asegurar legibilidad del texto */}
+          <div
+            aria-hidden
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background:
+                'radial-gradient(ellipse at center, rgba(13,13,13,0) 0%, rgba(13,13,13,0.55) 70%, rgba(13,13,13,0.85) 100%)',
+              pointerEvents: 'none',
+            }}
+          />
+
           {/* Tag superior izquierdo */}
           <motion.div
             initial={{ opacity: 0, y: -6 }}
@@ -82,7 +124,7 @@ export function SplashScreen({ visible, progress }: SplashScreenProps) {
             initial={{ opacity: 0, y: 28 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05, duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
-            style={{ marginBottom: '3rem' }}
+            style={{ marginBottom: '3rem', position: 'relative', zIndex: 1 }}
           >
             <div
               style={{
@@ -127,7 +169,7 @@ export function SplashScreen({ visible, progress }: SplashScreenProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.45, duration: 0.4 }}
-            style={{ width: 'clamp(200px, 30vw, 320px)' }}
+            style={{ width: 'clamp(200px, 30vw, 320px)', position: 'relative', zIndex: 1 }}
           >
             {/* Rail */}
             <div
@@ -174,7 +216,7 @@ export function SplashScreen({ visible, progress }: SplashScreenProps) {
                   color: 'rgba(255,255,255,0.15)',
                 }}
               >
-                346 comunas · CEAD
+                CEAD · DPP · PDI
               </span>
             </div>
           </motion.div>
@@ -234,6 +276,55 @@ export function SplashScreen({ visible, progress }: SplashScreenProps) {
               Mapa Judicial
             </span>
           </motion.div>
+
+          {/* Footer bottom izquierdo — crédito dispensai.cl */}
+          <motion.a
+            href="https://dispensai.cl"
+            target="_blank"
+            rel="noopener noreferrer"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6, duration: 0.4 }}
+            style={{
+              position: 'absolute',
+              bottom: 'clamp(1.5rem, 4vw, 2.5rem)',
+              left: 'clamp(2rem, 6vw, 5rem)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              textDecoration: 'none',
+              zIndex: 2,
+            }}
+          >
+            <span
+              style={{
+                fontFamily: 'CalSans, sans-serif',
+                fontSize: '9px',
+                letterSpacing: '3px',
+                color: 'rgba(255,255,255,0.28)',
+                textTransform: 'uppercase',
+              }}
+            >
+              Powered by
+            </span>
+            <span
+              style={{
+                width: '14px',
+                height: '1px',
+                backgroundColor: 'rgba(255,255,255,0.2)',
+              }}
+            />
+            <span
+              style={{
+                fontFamily: 'CalSans, sans-serif',
+                fontSize: '11px',
+                letterSpacing: '1.5px',
+                color: 'rgba(255,255,255,0.75)',
+              }}
+            >
+              dispensai.cl
+            </span>
+          </motion.a>
         </motion.div>
       )}
     </AnimatePresence>

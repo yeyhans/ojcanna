@@ -1,13 +1,27 @@
 <!doctype html>
-<html lang="en">
+<html lang="es" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark light" />
     <title>Observatorio Judicial Cannábico</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <script>
+      // Tema por ruta aplicado ANTES del primer paint (sin FOUC):
+      //   "/" → light (mapa coropleta)
+      //   cualquier otra ruta → dark (analytics)
+      // React sincroniza en cada navegación via useEffect en App.tsx.
+      (function () {
+        try {
+          var p = window.location.pathname;
+          var theme = (p === '/' || p === '') ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', theme);
+        } catch (_) { /* fallback al default HTML (dark) */ }
+      })();
+    </script>
 
     <!-- Acorta el camino crítico: TCP+TLS al backend y al CDN del basemap se
          abren mientras Vite aún parsea main.tsx. -->

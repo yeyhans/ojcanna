@@ -137,6 +137,13 @@ CREATE TABLE dpp_causas (...);
 -- datos.gob.cl / PDI: delitos, denuncias, víctimas (2024, regional)
 CREATE TABLE datosgob_seguridad (...);
 -- UNIQUE(anio, COALESCE(region_id,''), categoria, COALESCE(subcategoria,''))
+
+-- PJud Fase E: 4 tablas (2025+, capa pública + auditoría con HMAC salado)
+CREATE TABLE pjud_sentencias (id UUID PK, rol, tribunal_id, comuna_id FK, fecha, materia, texto_anonimizado, anonimizador_version, ocr_required, ...);
+CREATE TABLE pjud_extracciones (sentencia_id FK, extractor_version, gramaje_g, veredicto, pena_meses, tipo_delito, receta_medica, atipicidad_consumo_personal, confianza, ...);
+CREATE TABLE pjud_download_log (rol, tribunal_id, status, intentos, ...);  -- idempotencia scraper
+CREATE TABLE pjud_audit (sentencia_id FK, texto_hmac, entidades_detectadas JSONB, ...);  -- admin-only
+-- Marco normativo: Acta 164-2024 CS (vigencia 2025-01-01) + Ley 19.628 (Privacidad por Diseño)
 ```
 
 **Nota CUT:** Los IDs de comunas en `cead_hechos.comuna_id` provienen del portal CEAD
@@ -212,11 +219,25 @@ npx tsc --noEmit  # Type check sin compilar
 | GET | `/api/v1/pdi/serie` | Serie temporal |
 | GET | `/api/v1/mapa/pdi` | **DEPRECATED** |
 
-### Embudo del Punitivismo (cruce CEAD + DPP + PDI)
+### Embudo del Punitivismo (cruce CEAD + PDI + DPP + PJud — 4 etapas)
 | Método | Ruta | Descripción |
 |--------|------|-------------|
-| GET | `/api/v1/embudo?anio=&comuna_id=` | 3 etapas (policial, defensorial, investigativa) por comuna |
-| GET | `/api/v1/embudo/ranking?anio=` | Top 50 comunas por ratio detenciones/causas |
+| GET | `/api/v1/embudo?anio=&comuna_id=` | 4 etapas (policial CEAD, investigativa PDI, defensorial DPP, judicial PJud) — incluye `tasa_atricion_pct` |
+| GET | `/api/v1/embudo/ranking?anio=` | Top 50 comunas por volumen policial + ratio policial→judicial |
+| GET | `/api/v1/embudo/sankey?anio=&comuna_id=` | Estructura nodos+flujos para Diagrama de Sankey UNODC |
+
+### PJud — Sentencias Ley 20.000 (Fase E, MVP metadata-only — texto pendiente SAIP)
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/api/v1/pjud/filtros` | Años, materias y fuentes disponibles |
+| GET | `/api/v1/pjud/stats?anio=` | Stats agregadas (con/sin texto, total tribunales) |
+| GET | `/api/v1/pjud/resumen?anio=` | Breakdown por tribunal y materia |
+| GET | `/api/v1/pjud/proporcionalidad?anio=` | Scatter gramaje (g) vs pena (meses) |
+| GET | `/api/v1/pjud/por-tribunal?anio=` | Veredictos por tribunal |
+| GET | `/api/v1/pjud/por-region?anio=` | Veredictos por región |
+| GET | `/api/v1/pjud/veredictos?anio=` | Distribución nacional veredictos |
+
+> **Bloqueos operativos PJud**: (1) reCAPTCHA v3 del Portal Unificado bloquea scraping anónimo (HTTP 500 tras bootstrap) — mitigaciones futuras: playwright-stealth ya integrado, proxy residencial, oficio SAIP institucional. (2) Texto completo de sentencias requiere autenticación PJud institucional. (3) Var entorno `PJUD_AUDIT_SALT` requerida en `backend/.env` para fail-fast (HMAC tabla auditoría). Generar con `python -c "import secrets; print(secrets.token_hex(32))"`.
 
 > **Importante sobre `/embudo`:** como DPP no tiene granularidad comunal, las causas
 > regionales se **distribuyen proporcionalmente** entre las comunas de cada región
@@ -229,9 +250,9 @@ npx tsc --noEmit  # Type check sin compilar
 | A | Mapa coropleta CEAD | ✅ **Completo** |
 | B | Analytics DPP (causas defensoriales) | ✅ **Completo** |
 | C | Analytics PDI / datos.gob.cl | ✅ **Completo** |
-| D | Embudo del Punitivismo (cruce 3 fuentes) | ✅ **Completo** |
-| E | Scraper PJud + Pipeline NLP (sentencias) | 🔴 **Pendiente** |
-| F | Dashboards de discrecionalidad judicial (jueces, veredictos) | 🔴 **Pendiente** (depende de E) |
+| D | Embudo del Punitivismo (cruce 4 fuentes CEAD+PDI+DPP+PJud, Sankey UNODC) | ✅ **Completo** |
+| E | Scraper PJud + Pipeline NLP (sentencias) | 🟡 **MVP metadata-only** — pipeline + 7 endpoints + UI listos; **UI oculta** del NavBar/rutas hasta recibir SAIP. Backend + tests siguen vivos. |
+| F | Dashboards de discrecionalidad judicial (jueces, veredictos) | 🟡 **UI oculta** — código preservado, restaurar comentando 8 líneas en App.tsx + NavBar.tsx cuando llegue dataset PJud |
 
 ## Reglas y Convenciones
 - `async def` en todos los endpoints FastAPI (pool asyncpg, no SQLAlchemy sync en API).

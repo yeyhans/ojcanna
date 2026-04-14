@@ -3,6 +3,7 @@ import hashlib
 import json
 from datetime import datetime
 from pathlib import Path
+from typing import Literal
 
 import asyncpg
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -58,6 +59,28 @@ ORDER BY c.cut
 
 # Query para cargar geometrías al arrancar (precisión 4 decimales ~11m)
 _GEOM_SQL = "SELECT cut, ST_AsGeoJSON(geom, 4)::text AS geom FROM comunas ORDER BY cut"
+
+# Query con JOIN a ine_poblacion para tasa recalculada con denominador oficial
+_MAPA_SQL_INE = """
+SELECT
+    c.cut,
+    c.nombre,
+    COALESCE(SUM(h.tasa_100k),  0) AS tasa_agregada,
+    COALESCE(SUM(h.frecuencia), 0) AS frecuencia_total,
+    ip.poblacion_total              AS ine_poblacion
+FROM comunas c
+LEFT JOIN cead_hechos h
+    ON  c.cut         = h.comuna_id
+    AND h.anio        = $1
+    AND h.subgrupo_id = ANY($2::text[])
+    AND h.taxonomy_version = $3
+LEFT JOIN ine_poblacion ip
+    ON  c.cut  = ip.cut
+    AND ip.anio = $1
+    AND ip.fuente = 'ine_proyecciones_2017'
+GROUP BY c.cut, c.nombre, ip.poblacion_total
+ORDER BY c.cut
+"""
 
 
 async def load_geom_cache(pool: asyncpg.Pool) -> dict[str, dict]:
@@ -241,11 +264,26 @@ async def cead_stats(
     subgrupos: str = Query(
         ..., description="IDs de subgrupos separados por coma, ej: 40101,40102"
     ),
+    denominador: Literal["cead_oficial", "ine_2017"] = Query(
+        "cead_oficial",
+        description=(
+            "Denominador para el cálculo de tasas. "
+            "'cead_oficial' usa la tasa tal como la publica el CEAD. "
+            "'ine_2017' recalcula con población proyectada INE base Censo 2017 "
+            "(frecuencia / poblacion_ine * 100000). Si no hay match INE, "
+            "tasa_recalculada=null."
+        ),
+    ),
     pool: asyncpg.Pool = Depends(get_pool),
 ) -> Response:
-    """Devuelve sólo `[{cut, nombre, tasa_agregada, frecuencia_total}]` para la
-    combinación de año y subgrupos. Sin geometrías → payload ~10–20 KB en vez de
-    ~500 KB–1 MB del legacy `/mapa/cead`."""
+    """Devuelve `[{cut, nombre, tasa_agregada, frecuencia_total, tasa_recalculada?}]`
+    para la combinación de año y subgrupos. Sin geometrías → payload ~10–20 KB.
+
+    Con `denominador=ine_2017` agrega `tasa_recalculada` usando la población
+    proyectada INE (base Censo 2017). Útil para comparaciones metodológicas.
+    Las respuestas con denominador INE NO se cachean en memoria (por ahora) para
+    mantener la simplicidad del cache existente.
+    """
     subgrupo_ids = [s.strip() for s in subgrupos.split(",") if s.strip()]
     if not subgrupo_ids:
         raise HTTPException(status_code=422, detail="Se requiere al menos un subgrupo_id")
@@ -257,27 +295,64 @@ async def cead_stats(
             detail=f"subgrupo_id inválido: {invalidos}. Válidos: {list(SUBGRUPOS_VALIDOS)}",
         )
 
-    cache_key = (anio, frozenset(subgrupo_ids))
-    if cache_key in _STATS_CACHE:
-        return _build_response(_STATS_CACHE[cache_key], anio, request)
-
     taxonomy = TAXONOMY_2024 if anio >= TAXONOMY_CUTOFF_YEAR else TAXONOMY_LEGACY
-    async with pool.acquire() as conn:
-        rows = await conn.fetch(_MAPA_SQL, anio, subgrupo_ids, taxonomy)
 
-    stats = [
-        StatsItem(
-            cut=row["cut"],
-            nombre=row["nombre"],
-            tasa_agregada=float(row["tasa_agregada"]),
-            frecuencia_total=float(row["frecuencia_total"]),
+    # --- Modo cead_oficial: cache en memoria ---
+    if denominador == "cead_oficial":
+        cache_key = (anio, frozenset(subgrupo_ids))
+        if cache_key in _STATS_CACHE:
+            return _build_response(_STATS_CACHE[cache_key], anio, request)
+
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(_MAPA_SQL, anio, subgrupo_ids, taxonomy)
+
+        stats = [
+            StatsItem(
+                cut=row["cut"],
+                nombre=row["nombre"],
+                tasa_agregada=float(row["tasa_agregada"]),
+                frecuencia_total=float(row["frecuencia_total"]),
+            )
+            for row in rows
+        ]
+        body = StatsResponse(
+            anio=anio,
+            subgrupos=subgrupo_ids,
+            denominador_usado="cead_oficial",
+            stats=stats,
+        ).model_dump_json().encode()
+        _STATS_CACHE[cache_key] = body
+        return _build_response(body, anio, request)
+
+    # --- Modo ine_2017: JOIN con ine_poblacion, sin cache en memoria ---
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(_MAPA_SQL_INE, anio, subgrupo_ids, taxonomy)
+
+    stats = []
+    for row in rows:
+        frecuencia = float(row["frecuencia_total"])
+        ine_pob = row["ine_poblacion"]
+        tasa_recalculada: float | None = None
+        if ine_pob is not None and ine_pob > 0:
+            tasa_recalculada = round(frecuencia / ine_pob * 100_000, 4)
+
+        stats.append(
+            StatsItem(
+                cut=row["cut"],
+                nombre=row["nombre"],
+                tasa_agregada=float(row["tasa_agregada"]),
+                frecuencia_total=frecuencia,
+                tasa_recalculada=tasa_recalculada,
+            )
         )
-        for row in rows
-    ]
+
     body = StatsResponse(
-        anio=anio, subgrupos=subgrupo_ids, stats=stats
+        anio=anio,
+        subgrupos=subgrupo_ids,
+        denominador_usado="ine_2017",
+        stats=stats,
     ).model_dump_json().encode()
-    _STATS_CACHE[cache_key] = body
+
     return _build_response(body, anio, request)
 
 

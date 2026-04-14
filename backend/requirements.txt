@@ -44,3 +44,6 @@ geopandas>=1.0
 shapely>=2.0
 # Nuevas fuentes DPP/PDI — lectura de XLS legado
 xlrd>=2.0
+# PJud Mes 2: anonimización NER (spaCy) + scraping stealth
+spacy>=3.7
+playwright-stealth>=1.0.6

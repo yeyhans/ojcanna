@@ -1,111 +1,69 @@
 // frontend/src/pages/DppPage.tsx
-// Página de análisis de la Defensoría Penal Pública (Ley 20.000)
-import { useState, useEffect } from 'react'
+//
+// Defensoría Penal Pública — causas Ley 20.000.
+// Viz upgrades respecto a versión anterior:
+//   · PieChart donut → Stacked100Bar (longitud > ángulo, Cleveland/McGill)
+//   · BarChart regional → Lollipop (menos tinta, ranking ordenable)
+//   · Tabla Formas de Término → SortableTable
+//   · KPI extra "Tasa de Condena" = condena / (condena + absolución)
+//   · Serie Ingresos vs Términos con área "stock abierto" = diferencia acumulada
+
+import { useState, useEffect, useMemo } from 'react'
+import { motion } from 'framer-motion'
+import {
+  Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, Legend as RLegend, Area, ComposedChart,
+} from 'recharts'
 import { InfoModal } from '../components/InfoModal'
 import {
-  PieChart, Pie, Cell, Tooltip, Legend as RLegend, ResponsiveContainer,
-  LineChart, Line, XAxis, YAxis, CartesianGrid,
-  BarChart, Bar,
-} from 'recharts'
-import {
-  useDppFiltros,
-  useDppResumen,
-  useDppSerie,
-  useDppRegiones,
+  useDppFiltros, useDppResumen, useDppSerie, useDppRegiones,
+  type FormaTermino,
 } from '../hooks/useDppAnalytics'
+import {
+  PageShell, SectionTitle, DataCard, KpiCard, ChartFrame, SourceBadge,
+  chartTooltipStyle, chartTooltipItemStyle, chartAxisTickStyle, chartGridProps,
+  SortableTable, type SortableColumn, SiteFooter,
+} from '../components/ui'
+import { Stacked100Bar } from '../components/viz/Stacked100Bar'
+import { Lollipop } from '../components/viz/Lollipop'
 
-// Color palette inspired by deep tech but with semantic clarity
-const PIE_COLORS = ['#f8f8f6', '#b0b0b0', '#5a5a5a', '#2a2a2a', '#d1d5db', '#9ca3af']
+const fmt = new Intl.NumberFormat('es-CL').format
 
 const FORMA_SHORT: Record<string, string> = {
-  'Absolución':               'Absolución',
-  'Condena':                  'Condena',
-  'Derivación':               'Derivación',
+  'Absolución': 'Absolución',
+  'Condena': 'Condena',
+  'Derivación': 'Derivación',
   'Facultativos de Fiscalía': 'Facultativos',
-  'Otras formas de término':  'Otras',
-  'Salida Alternativa':       'Salida Alt.',
+  'Otras formas de término': 'Otras',
+  'Salida Alternativa': 'Salida Alt.',
 }
 
-function KpiCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
-    <div className="bg-[#1a1a1a] rounded border border-[#2a2a2a] p-6 relative overflow-hidden group">
-      <div className="absolute inset-0 dot-grid-light opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
-      <p className="text-label-deep text-[#b0b0b0] mb-2">{label}</p>
-      <p className="text-3xl font-cal text-[#f8f8f6] mb-1">{value}</p>
-      {sub && <p className="text-[10px] text-[#5a5a5a] uppercase tracking-wider">{sub}</p>}
-    </div>
-  )
-}
+const FORMAS_COLUMNS: SortableColumn<FormaTermino>[] = [
+  {
+    key: 'nombre',
+    label: 'Forma de término',
+    sortable: true,
+    align: 'left',
+    format: 'text',
+  },
+  {
+    key: 'n_causas',
+    label: 'N° causas',
+    sortable: true,
+    align: 'right',
+    format: 'integer',
+  },
+  {
+    key: 'porcentaje',
+    label: '% del total',
+    sortable: true,
+    align: 'right',
+    format: 'percent',
+  },
+]
 
-function LoadingCard({ title: _title }: { title: string }) {
-  return (
-    <div className="bg-[#1a1a1a] rounded border border-[#2a2a2a] p-6 animate-pulse">
-      <div className="h-2 w-24 bg-[#2a2a2a] mb-4" />
-      <div className="h-8 w-32 bg-[#2a2a2a] mb-4" />
-      <div className="mt-4 h-48 bg-slate-50 rounded" />
-    </div>
-  )
-}
-
-function fmt(n: number) {
-  return n.toLocaleString('es-CL')
-}
-
-interface FormaTermino {
-  nombre: string
-  n_causas: number
-  porcentaje: number
-}
-
-function TablaFormas({ formas, anio }: { formas: FormaTermino[]; anio: number | null }) {
-  return (
-    <div className="bg-[#1a1a1a] rounded border border-[#2a2a2a] overflow-hidden">
-      <div className="px-6 py-4 border-b border-[#2a2a2a] bg-slate-50/50">
-        <h2 className="text-label-deep text-[#f8f8f6]">Detalle de Términos — {anio}</h2>
-      </div>
-
-      <div className="sm:hidden divide-y divide-[#2a2a2a]">
-        {formas.map((f, i) => (
-          <div key={f.nombre} className="flex items-center justify-between px-6 py-4">
-            <div className="flex items-center gap-3">
-              <span className="w-2 h-2 rounded-full" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
-              <span className="text-xs font-semibold text-[#f8f8f6] uppercase tracking-wider">{f.nombre}</span>
-            </div>
-            <div className="text-right">
-              <span className="text-sm font-cal text-[#f8f8f6]">{fmt(f.n_causas)}</span>
-              <span className="ml-2 text-[10px] text-[#b0b0b0]">{f.porcentaje}%</span>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <table className="hidden sm:table w-full text-xs">
-        <thead className="bg-slate-50/50 text-label-deep text-[#b0b0b0]">
-          <tr>
-            <th className="px-6 py-4 text-left font-medium">Forma de término</th>
-            <th className="px-6 py-4 text-right font-medium">N° causas</th>
-            <th className="px-6 py-4 text-right font-medium">% del total</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-[#2a2a2a]">
-          {formas.map((f, i) => (
-            <tr key={f.nombre} className="hover:bg-slate-50/30 transition-colors">
-              <td className="px-6 py-4 text-[#f8f8f6]">
-                <div className="flex items-center gap-3">
-                  <span className="w-2 h-2 rounded-full" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
-                  {f.nombre}
-                </div>
-              </td>
-              <td className="px-6 py-4 text-right font-cal text-[#f8f8f6] text-sm">{fmt(f.n_causas)}</td>
-              <td className="px-6 py-4 text-right">
-                <span className="chip border-[#2a2a2a] text-[#b0b0b0]">{f.porcentaje}%</span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
+function findValue(formas: FormaTermino[], nombre: string): number {
+  return formas.find((f) => f.nombre === nombre)?.n_causas ?? 0
 }
 
 export default function DppPage() {
@@ -123,135 +81,239 @@ export default function DppPage() {
   const { data: serie } = useDppSerie()
   const { data: regiones } = useDppRegiones(anio)
 
-  const pieData = resumen?.formas_termino.map((f, i) => ({
-    name: FORMA_SHORT[f.nombre] ?? f.nombre,
-    fullName: f.nombre,
-    value: f.n_causas,
-    porcentaje: f.porcentaje,
-    fill: PIE_COLORS[i % PIE_COLORS.length],
-  })) ?? []
+  // ─── Cálculos derivados ──────────────────────────────────────────────────
+  const tasaCondena = useMemo(() => {
+    if (!resumen) return null
+    const condena = findValue(resumen.formas_termino, 'Condena')
+    const absolucion = findValue(resumen.formas_termino, 'Absolución')
+    const denom = condena + absolucion
+    if (denom === 0) return null
+    return (condena / denom) * 100
+  }, [resumen])
+
+  const segments = useMemo(
+    () =>
+      (resumen?.formas_termino ?? []).map((f) => ({
+        label: FORMA_SHORT[f.nombre] ?? f.nombre,
+        value: f.n_causas,
+      })),
+    [resumen],
+  )
+
+  // Serie con "stock abierto" = ingresos - terminos (causas pendientes acumuladas)
+  const serieExtended = useMemo(() => {
+    if (!serie) return []
+    return serie.map((p) => ({
+      ...p,
+      stockAbierto: Math.max(0, p.ingresos - p.terminos),
+    }))
+  }, [serie])
+
+  const regionItems = useMemo(
+    () =>
+      (regiones ?? []).map((r) => ({
+        label: r.region_nombre,
+        value: r.n_ingresos,
+      })),
+    [regiones],
+  )
 
   return (
-    <div className="min-h-full bg-[#0a0a0a] pb-24 relative">
-      <div className="absolute inset-0 dot-grid-light pointer-events-none opacity-40"></div>
-      
+    <PageShell ghostText="DPP" maxWidth="7xl">
       <InfoModal open={infoOpen} onClose={() => setInfoOpen(false)} source="dpp" />
 
-      {/* Hero Header */}
-      <div className="relative px-6 py-16 sm:py-24 border-b border-[#2a2a2a]">
-        <div className="max-w-7xl mx-auto relative z-10">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
-            <div className="max-w-3xl">
-              <span className="chip bg-[#f8f8f6] text-[#0a0a0a] border-[#f8f8f6] mb-6">
-                DPP · Análisis Estadístico
-              </span>
-              <h1 className="text-h1-deep text-[#f8f8f6] mb-6">
-                Observatorio Judicial <br /> <span className="text-[#5a5a5a]">Ley de Drogas Chile</span>
-              </h1>
-              <p className="text-body-deep text-[#b0b0b0] max-w-2xl">
-                Visualización avanzada de causas penales gestionadas por la Defensoría Penal Pública. 
-                Monitoreo del punitivismo y cumplimiento de derechos en el sistema judicial.
-              </p>
-            </div>
+      {/* ─── Hero ────────────────────────────────────────────────────────── */}
+      <motion.header
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        className="mb-12"
+      >
+        <div className="flex items-center gap-3 mb-5">
+          <span className="rule-mark" aria-hidden="true" />
+          <span className="text-label-deep">Defensoría Penal Pública · Ley 20.000</span>
+          <SourceBadge source="DPP" granularidad="nacional" />
+        </div>
 
-            <div className="flex items-center gap-4 bg-[#1a1a1a] p-4 rounded border border-[#2a2a2a] shadow-sm">
-              <label className="text-label-deep text-[#b0b0b0]">Filtrar Año</label>
-              <select
-                value={anio ?? ''}
-                onChange={e => setAnio(Number(e.target.value))}
-                className="font-cal text-sm border-none focus:ring-0 bg-transparent"
-              >
-                {filtros?.anios?.map(a => <option key={a} value={a}>{a}</option>)}
-              </select>
-            </div>
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
+          <div>
+            <h1 className="text-h1-deep text-[var(--ink)] mb-4">
+              Observatorio Judicial <br />
+              <span className="text-[var(--dim)]">Ley de Drogas Chile</span>
+            </h1>
+            <p className="text-[var(--dim)] text-base sm:text-lg leading-relaxed max-w-2xl font-light">
+              Causas penales gestionadas por la Defensoría en el sistema de Ley 20.000.
+              Monitoreo de ingresos, términos y formas de resolución.
+            </p>
           </div>
-        </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-6 mt-12 space-y-12 relative z-10">
-        
-        {/* KPIs */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {resumenLoading ? [1,2,3].map(i => <LoadingCard key={i} title="..." />) : (
-            <>
-              <KpiCard label="Ingresos Totales" value={fmt(resumen?.total_ingresos ?? 0)} sub={`Defensas iniciadas en ${anio}`} />
-              <KpiCard label="Causas Terminadas" value={fmt(resumen?.total_terminos ?? 0)} sub="Resoluciones dictadas" />
-              <KpiCard label="Eficacia de Gestión" value={`${((resumen?.ratio_terminos ?? 0) * 100).toFixed(1)}%`} sub="Relación términos/ingresos" />
-            </>
-          )}
-        </div>
-
-        {/* Charts Section */}
-        <div className="grid lg:grid-cols-2 gap-12">
-          
-          {/* Pie Chart */}
-          <div className="bg-[#1a1a1a] rounded border border-[#2a2a2a] p-8">
-            <h3 className="text-label-deep text-[#f8f8f6] mb-8">Composición de Términos</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={80}
-                  outerRadius={110}
-                  paddingAngle={4}
-                  dataKey="value"
+          {filtros?.anios?.length ? (
+            <DataCard accent="left" padding="md" className="shrink-0">
+              <div className="flex items-center gap-4">
+                <label htmlFor="dpp-anio" className="text-[10px] uppercase tracking-[0.25em] text-[var(--dim-soft)] font-bold">
+                  Año
+                </label>
+                <select
+                  id="dpp-anio"
+                  value={anio ?? ''}
+                  onChange={(e) => setAnio(Number(e.target.value))}
+                  className="font-cal text-sm bg-transparent text-[var(--ink)] border-none focus:ring-0 outline-none"
                 >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} stroke="transparent" />
+                  {filtros.anios.map((a) => (
+                    <option key={a} value={a} style={{ background: 'var(--paper-elev)' }}>
+                      {a}
+                    </option>
                   ))}
-                </Pie>
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '4px', fontSize: '10px' }}
-                  itemStyle={{ color: '#f8f8f6' }}
-                />
-                <RLegend layout="vertical" align="right" verticalAlign="middle" iconType="circle" wrapperStyle={{ fontSize: '10px', textTransform: 'uppercase' }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Line Chart */}
-          <div className="bg-[#1a1a1a] rounded border border-[#2a2a2a] p-8">
-            <h3 className="text-label-deep text-[#f8f8f6] mb-8">Evolución Histórica</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={serie ?? []}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#2a2a2a" />
-                <XAxis dataKey="anio" tick={{ fontSize: 10, fill: '#b0b0b0' }} axisLine={false} tickLine={false} dy={10} />
-                <YAxis tick={{ fontSize: 10, fill: '#b0b0b0' }} axisLine={false} tickLine={false} tickFormatter={v => `${(v/1000).toFixed(0)}k`} />
-                <Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '4px', fontSize: '10px' }} itemStyle={{ color: '#f8f8f6' }} />
-                <Line type="monotone" dataKey="ingresos" stroke="#f8f8f6" strokeWidth={3} dot={{ r: 4, fill: '#f8f8f6' }} name="Ingresos" />
-                <Line type="monotone" dataKey="terminos" stroke="#5a5a5a" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 4, fill: '#5a5a5a' }} name="Términos" />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setInfoOpen(true)}
+                  className="text-[9px] uppercase tracking-[0.2em] font-bold text-[var(--dim)] hover:text-[var(--ink)] border border-[var(--card-border)] hover:border-[var(--ink)] px-2 py-1 rounded-sm transition-colors"
+                >
+                  Info
+                </button>
+              </div>
+            </DataCard>
+          ) : null}
         </div>
+      </motion.header>
 
-        {/* Region Bar Chart */}
-        <div className="bg-[#1a1a1a] rounded p-8 sm:p-12 border border-[#2a2a2a] text-[#f8f8f6] overflow-hidden relative group">
-          <div className="absolute inset-0 dot-grid-dark opacity-20"></div>
-          <div className="relative z-10">
-            <h3 className="text-label-deep text-[#f8f8f6] mb-8">Distribución Regional de Imputados (Total Sistema)</h3>
-            <ResponsiveContainer width="100%" height={400}>
-              <BarChart data={[...(regiones ?? [])].sort((a,b) => b.n_ingresos - a.n_ingresos)} layout="vertical" margin={{ left: 40 }}>
-                <XAxis type="number" hide />
-                <YAxis dataKey="region_nombre" type="category" tick={{ fontSize: 9, fill: '#b0b0b0' }} axisLine={false} tickLine={false} width={120} />
-                <Tooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a', color: '#f8f8f6', borderRadius: '4px', fontSize: '10px' }} itemStyle={{ color: '#f8f8f6' }} />
-                <Bar dataKey="n_ingresos" fill="#f8f8f6" radius={[0, 2, 2, 0]} barSize={20} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+      {/* ─── KPIs ─────────────────────────────────────────────────────────── */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
+        {resumenLoading || !resumen ? (
+          [0, 1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="h-32 bg-[var(--paper-elev)] border border-[var(--card-border)] rounded-sm animate-pulse"
+            />
+          ))
+        ) : (
+          <>
+            <KpiCard
+              label="Ingresos Totales"
+              value={fmt(resumen.total_ingresos)}
+              sublabel={`Defensas iniciadas en ${anio}`}
+              accent
+            />
+            <KpiCard
+              label="Causas Terminadas"
+              value={fmt(resumen.total_terminos)}
+              sublabel="Resoluciones dictadas"
+            />
+            <KpiCard
+              label="Eficacia de Gestión"
+              value={`${(resumen.ratio_terminos * 100).toFixed(1)}%`}
+              sublabel="Términos / Ingresos"
+            />
+            <KpiCard
+              label="Tasa de Condena"
+              value={tasaCondena !== null ? `${tasaCondena.toFixed(1)}%` : '—'}
+              sublabel="Condena / (Condena + Absolución)"
+            />
+          </>
+        )}
+      </section>
 
-        {/* Detailed Table */}
-        <TablaFormas formas={resumen?.formas_termino ?? []} anio={anio} />
+      {/* ─── Composición de términos — Stacked100Bar ─────────────────────── */}
+      <section className="mb-12">
+        <DataCard accent="left" padding="lg">
+          <SectionTitle
+            eyebrow={`Composición · ${anio ?? ''}`}
+            title="Formas de término de las causas"
+            subtitle="Distribución porcentual de resoluciones dictadas. Cada segmento representa una forma distinta; la longitud es proporcional a su peso relativo."
+          />
+          <Stacked100Bar segments={segments} height={56} showLegend />
+        </DataCard>
+      </section>
 
-        <footer className="pt-12 border-t border-[#2a2a2a]">
-          <p className="text-[9px] uppercase tracking-[0.2em] text-[#5a5a5a]">
-            Fuente: Defensoría Penal Pública (SIGDP) · Observatorio Judicial Anonimous Canna 2026
-          </p>
-        </footer>
-      </div>
-    </div>
+      {/* ─── Evolución histórica + stock abierto ──────────────────────────── */}
+      <section className="mb-12">
+        <ChartFrame
+          eyebrow="Serie Temporal"
+          title="Ingresos vs términos (stock abierto)"
+          subtitle="El área sombreada es el stock abierto estimado: ingresos del año que no fueron terminados (causas pendientes)."
+          height={340}
+        >
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={serieExtended} margin={{ top: 10, right: 20, bottom: 5, left: 0 }}>
+              <CartesianGrid {...chartGridProps} />
+              <XAxis dataKey="anio" tick={chartAxisTickStyle} axisLine={false} tickLine={false} />
+              <YAxis
+                tick={chartAxisTickStyle}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(v: number) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v))}
+              />
+              <Tooltip
+                contentStyle={chartTooltipStyle}
+                itemStyle={chartTooltipItemStyle}
+                formatter={(v) => fmt(Number(v))}
+              />
+              <RLegend wrapperStyle={{ fontSize: '11px', paddingTop: 8 }} />
+              <Area
+                type="monotone"
+                dataKey="stockAbierto"
+                name="Stock abierto"
+                fill="var(--chart-4)"
+                fillOpacity={0.2}
+                stroke="none"
+              />
+              <Line
+                type="monotone"
+                dataKey="ingresos"
+                stroke="var(--chart-1)"
+                strokeWidth={2}
+                dot={{ r: 3, fill: 'var(--chart-1)' }}
+                name="Ingresos"
+              />
+              <Line
+                type="monotone"
+                dataKey="terminos"
+                stroke="var(--chart-3)"
+                strokeWidth={2}
+                strokeDasharray="5 5"
+                dot={{ r: 3, fill: 'var(--chart-3)' }}
+                name="Términos"
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </ChartFrame>
+      </section>
+
+      {/* ─── Ranking regional — Lollipop ───────────────────────────────────── */}
+      <section className="mb-12">
+        <DataCard accent="left" padding="lg">
+          <SectionTitle
+            eyebrow={`Ranking regional · ${anio ?? ''}`}
+            title="Distribución regional de imputados"
+            subtitle="Ordenado por volumen de ingresos. Cada línea representa una región; el punto al final marca el total."
+          />
+          <Lollipop data={regionItems} />
+        </DataCard>
+      </section>
+
+      {/* ─── Detalle tabla ordenable ──────────────────────────────────────── */}
+      <section className="mb-12">
+        <SectionTitle
+          eyebrow={`Detalle · ${anio ?? ''}`}
+          title="Formas de término — tabla"
+          subtitle="Ordenable por cualquier columna. Exportable a CSV preservando el orden actual."
+        />
+        <SortableTable
+          columns={FORMAS_COLUMNS}
+          data={resumen?.formas_termino ?? []}
+          rowKey={(r) => r.nombre}
+          initialSort={{ key: 'porcentaje', direction: 'desc' }}
+          exportCsv
+          exportFilename={`dpp_formas_termino_${anio ?? 'all'}.csv`}
+        />
+      </section>
+
+      <SiteFooter
+        organismo="Fuente: Defensoría Penal Pública (SIGDP)"
+        source="DPP"
+        granularidad="regional"
+      />
+    </PageShell>
   )
 }

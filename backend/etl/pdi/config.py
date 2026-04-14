@@ -11,11 +11,16 @@ BASE_DIR = Path(__file__).resolve().parents[2]   # backend/
 RAW_DATA_DIR = BASE_DIR / "data" / "pdi"
 RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-# URLs directas de descarga (verificadas en 2026-03)
+# URLs directas de descarga (verificadas vía CKAN API de datos.gob.cl, abril 2026)
 PDI_XLS_FILES: dict[tuple[int, str], str] = {
+    # --- 2024 ---
     (2024, "delitos"):   "https://datos.gob.cl/dataset/5373dac4-a77a-48b2-9a8b-9cef7311f941/resource/26633482-466b-40f8-bb0d-024f2e95c960/download/cantidad-de-delitos-y-faltas-investigadas-2024.xls",
     (2024, "denuncias"): "https://datos.gob.cl/dataset/5373dac4-a77a-48b2-9a8b-9cef7311f941/resource/74688cb0-4622-438f-8d53-dd5cff398557/download/cantidad-de-denuncias-art-18-2024.xls",
     (2024, "victimas"):  "https://datos.gob.cl/dataset/5373dac4-a77a-48b2-9a8b-9cef7311f941/resource/63e21a08-b8e1-4a3e-9a01-8991a32be9df/download/cantidad-de-victimas-art-18-2024.xls",
+    # --- 2025 (publicados enero 2026) ---
+    (2025, "delitos"):   "https://datos.gob.cl/dataset/5373dac4-a77a-48b2-9a8b-9cef7311f941/resource/b9bdcf46-f717-4dd0-8022-52e2ce3f4080/download/cantidad-de-delitos-y-faltas-investigadas-art.-18-2025.xls",
+    (2025, "denuncias"): "https://datos.gob.cl/dataset/5373dac4-a77a-48b2-9a8b-9cef7311f941/resource/c4675051-558b-42d7-ad15-87f4bb6ee458/download/cantidad-de-denuncias-art-18-2025.xls",
+    (2025, "victimas"):  "https://datos.gob.cl/dataset/5373dac4-a77a-48b2-9a8b-9cef7311f941/resource/285a2c22-9301-4456-9e18-9fd8dbb1c6f2/download/cantidad-de-victimas-art-18-2025.xls",
 }
 
 # Términos para filtrar filas de Ley de Drogas en los archivos PDI

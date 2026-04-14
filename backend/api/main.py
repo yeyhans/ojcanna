@@ -8,9 +8,13 @@ from fastapi.middleware.gzip import GZipMiddleware
 
 from api.database import create_pool
 from api.routers.cead import load_geom_cache, prewarm_cache, router as cead_router
+from api.routers.contexto import router as contexto_router
 from api.routers.dpp import router as dpp_router
-from api.routers.pdi import router as pdi_router
 from api.routers.embudo import router as embudo_router
+from api.routers.export import router as export_router
+from api.routers.fiscalia import router as fiscalia_router
+from api.routers.pdi import router as pdi_router
+from api.routers.pjud import router as pjud_router
 
 
 @asynccontextmanager
@@ -43,9 +47,13 @@ app.add_middleware(
 )
 
 app.include_router(cead_router)
+app.include_router(contexto_router)
 app.include_router(dpp_router)
 app.include_router(pdi_router)
+app.include_router(fiscalia_router)
+app.include_router(pjud_router)
 app.include_router(embudo_router)
+app.include_router(export_router)
 
 
 @app.get("/health")

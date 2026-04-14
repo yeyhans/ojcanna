@@ -1,248 +1,245 @@
 // frontend/src/pages/EmbudoPage.tsx
-// Página del Embudo del Punitivismo — análisis cross-source
-import { useState, useEffect } from 'react'
-import { InfoModal } from '../components/InfoModal'
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer
-} from 'recharts'
-import { useEmbudoRanking } from '../hooks/useEmbudo'
-import { useDppFiltros } from '../hooks/useDppAnalytics'
+// Embudo del Punitivismo — 4 etapas: CEAD → PDI → DPP → PJud
+import { useEffect, useState } from 'react'
+import { useEmbudo, useEmbudoRanking, useEmbudoSankey } from '../hooks/useEmbudo'
+import { EmbudoSankey } from '../components/EmbudoSankey'
 import { useIsMobile } from '../hooks/useIsMobile'
 
-// PIE_COLORS unused
-function RatioBadge({ ratio }: { ratio: number }) {
-  const pct = Math.round(ratio * 100)
-  return (
-    <span className="chip border-[#2a2a2a] text-[#f8f8f6] font-cal">
-      {pct}%
-    </span>
-  )
+const STAGE_COLORS: Record<string, string> = {
+  policial:        '#dc2626',
+  investigativa:   '#0891b2',
+  defensorial:     '#ca8a04',
+  judicial:        '#16a34a',
 }
 
-interface EmbudoItem {
-  comuna_id: string
-  nombre: string
-  region_id: string
-  detenciones: number
-  causas_defensor: number
-  ratio: number
-}
+const ANIOS_DISPONIBLES = [2024, 2023, 2022, 2021, 2020]
 
-function TablaRanking({
-  items,
-  search,
-  onSearch,
-}: {
-  items: EmbudoItem[]
-  search: string
-  onSearch: (v: string) => void
-}) {
-  const fmt = (n: number) => n.toLocaleString('es-CL')
-
-  return (
-    <div className="bg-[#1a1a1a] rounded border border-[#2a2a2a] overflow-hidden">
-      <div className="px-6 py-6 border-b border-[#2a2a2a] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 bg-slate-50/30">
-        <div>
-          <h2 className="text-label-deep text-[#f8f8f6]">Ranking Territorial por Ratio</h2>
-          <p className="text-[10px] text-[#5a5a5a] uppercase tracking-wider mt-1">
-            {items.length} COMUNAS IDENTIFICADAS · ORDEN POR PUNITIVISMO
-          </p>
-        </div>
-        <div className="relative">
-          <input
-            type="search"
-            placeholder="BUSCAR COMUNA..."
-            value={search}
-            onChange={e => onSearch(e.target.value)}
-            className="w-full sm:w-64 text-[10px] font-bold tracking-[0.1em] border border-[#2a2a2a] rounded px-4 py-2 focus:ring-1 focus:ring-[#f8f8f6] focus:border-[#f8f8f6] outline-none bg-[#1a1a1a] uppercase"
-          />
-        </div>
-      </div>
-
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs">
-          <thead className="bg-slate-50/50 text-label-deep text-[#b0b0b0]">
-            <tr>
-              <th className="px-6 py-4 text-left font-medium">#</th>
-              <th className="px-6 py-4 text-left font-medium">Comuna</th>
-              <th className="px-6 py-4 text-left font-medium">Región</th>
-              <th className="px-4 py-4 text-right font-medium">Detenciones</th>
-              <th className="px-4 py-4 text-right font-medium">Causas DPP</th>
-              <th className="px-6 py-4 text-right font-medium">Ratio</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#2a2a2a]">
-            {items.map((item, i) => (
-              <tr key={item.comuna_id} className="hover:bg-slate-50/30 transition-colors group">
-                <td className="px-6 py-4 text-[#5a5a5a] font-cal">{i + 1}</td>
-                <td className="px-6 py-4 font-cal text-[#f8f8f6] text-sm group-hover:underline cursor-default">{item.nombre}</td>
-                <td className="px-6 py-4 text-[#b0b0b0] text-[10px] uppercase tracking-wider font-bold">{item.region_id}</td>
-                <td className="px-4 py-4 text-right font-cal text-[#f8f8f6]">{fmt(Math.round(item.detenciones))}</td>
-                <td className="px-4 py-4 text-right font-cal text-[#b0b0b0]">
-                  {item.causas_defensor > 0 ? fmt(Math.round(item.causas_defensor)) : '—'}
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <RatioBadge ratio={item.ratio} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  )
+function fmt(n: number) {
+  return n.toLocaleString('es-CL')
 }
 
 export default function EmbudoPage() {
   const isMobile = useIsMobile()
-  const { data: filtros } = useDppFiltros()
-  const [anio, setAnio] = useState<number | null>(null)
-  const [search, setSearch] = useState('')
-  const [infoOpen, setInfoOpen] = useState(false)
+  const [anio, setAnio] = useState<number>(2024)
+  const [comunaId, setComunaId] = useState<string | null>(null)
+
+  const { data: embudo } = useEmbudo(anio, comunaId)
+  const { data: sankey } = useEmbudoSankey(anio, comunaId)
+  const { data: ranking } = useEmbudoRanking(anio)
 
   useEffect(() => {
-    if (filtros?.anios?.length && anio === null) {
-      setAnio(Math.max(...filtros.anios))
-    }
-  }, [filtros, anio])
+    // Reset comuna al cambiar año
+  }, [anio])
 
-  const { items, error } = useEmbudoRanking(anio ?? 0)
-
-  const filtered = items.filter(it =>
-    it.nombre.toLowerCase().includes(search.toLowerCase())
-  )
-
-  const chartData = [...items]
-    .filter(it => it.detenciones > 0)
-    .sort((a, b) => b.detenciones - a.detenciones)
-    .slice(0, isMobile ? 10 : 20)
-    .map(it => ({
-      nombre: it.nombre,
-      detenciones: Math.round(it.detenciones),
-      causas_defensor: Math.round(it.causas_defensor),
-    }))
-
-
+  const totalPolicial = embudo?.etapas?.find(e => e.etapa === 'policial')?.n_casos ?? 0
+  const totalJudicial = embudo?.etapas?.find(e => e.etapa === 'judicial')?.n_casos ?? 0
+  const tasaAtricion = embudo?.tasa_atricion_pct ?? null
 
   return (
     <div className="min-h-full bg-[#0a0a0a] pb-24 relative">
-      <div className="absolute inset-0 dot-grid-light pointer-events-none opacity-40"></div>
-      <InfoModal open={infoOpen} onClose={() => setInfoOpen(false)} source="embudo" />
+      <div className="absolute inset-0 dot-grid-light pointer-events-none opacity-40" />
 
-      {/* Hero Header */}
+      {/* Hero */}
       <div className="relative px-6 py-16 sm:py-24 border-b border-[#2a2a2a]">
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
             <div className="max-w-3xl">
               <span className="chip bg-[#f8f8f6] text-[#0a0a0a] border-[#f8f8f6] mb-6">
-                DPP + CEAD · Embudo Analítico
+                Embudo · 4 fuentes oficiales · Ley 20.000
               </span>
               <h1 className="text-h1-deep text-[#f8f8f6] mb-6">
-                Embudo del <br /> <span className="text-[#5a5a5a]">Punitivismo</span>
+                El Embudo <br /> <span className="text-[#5a5a5a]">del Punitivismo</span>
               </h1>
               <p className="text-body-deep text-[#b0b0b0] max-w-2xl">
-                Correlación entre detenciones policiales y acceso a representación legal. 
-                Un análisis crítico de la brecha de justicia en procedimientos de drogas.
+                Flujo del sistema penal chileno desde la detención policial (CEAD) hasta
+                la sentencia judicial (PJud). Visualiza la "tasa de atrición" —
+                cuántas detenciones terminan efectivamente en condena — siguiendo
+                estándares UNODC.
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-4 bg-[#1a1a1a] p-4 rounded border border-[#2a2a2a] shadow-sm">
-              <div className="flex items-center gap-4 mr-4">
+            <div className="flex flex-col sm:flex-row items-center gap-4 bg-[#1a1a1a] p-4 rounded border border-[#2a2a2a]">
+              <div className="flex items-center gap-4">
                 <label className="text-label-deep text-[#b0b0b0]">AÑO</label>
                 <select
-                  value={anio ?? ''}
-                  onChange={e => setAnio(Number(e.target.value))}
-                  className="font-cal text-sm border-none focus:ring-0 bg-transparent"
+                  value={anio}
+                  onChange={e => { setAnio(Number(e.target.value)); setComunaId(null) }}
+                  className="font-cal text-sm border-none focus:ring-0 bg-transparent text-[#f8f8f6]"
                 >
-                  {filtros?.anios?.map(a => <option key={a} value={a}>{a}</option>)}
+                  {ANIOS_DISPONIBLES.map(a => (
+                    <option key={a} value={a} className="bg-[#1a1a1a]">{a}</option>
+                  ))}
                 </select>
               </div>
-              <button
-                onClick={() => setInfoOpen(true)}
-                className="chip border-[#2a2a2a] text-[#f8f8f6] hover:bg-[#f8f8f6] hover:text-[#0a0a0a] transition-all"
-              >
-                DATOS & METODOLOGÍA
-              </button>
+              {comunaId && (
+                <button
+                  onClick={() => setComunaId(null)}
+                  className="chip bg-transparent text-[#b0b0b0] border-[#2a2a2a] hover:border-[#f8f8f6] hover:text-[#f8f8f6] transition-colors"
+                >
+                  ← Vista nacional
+                </button>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 mt-12 space-y-12 relative z-10">
-        
-        {/* Methodological Box */}
-        <div className="bg-[#1a1a1a] border border-[#2a2a2a] p-8 rounded relative overflow-hidden group">
-          <div className="absolute inset-0 dot-grid-light opacity-30"></div>
-          <div className="relative z-10">
-            <h4 className="font-cal text-sm uppercase tracking-widest text-[#f8f8f6] mb-4">Nota de Extracción</h4>
-            <p className="text-sm text-[#b0b0b0] leading-relaxed max-w-4xl">
-              Los datos <span className="text-[#f8f8f6] font-bold">CEAD</span> capturan el punto geográfico de detención, mientras que los registros de <span className="text-[#f8f8f6] font-bold">DPP</span> se agregan por jurisdicción regional. El ratio proyectado estima la cobertura legal efectiva frente a la actividad policial territorial en el marco de la <span className="italic">Ley N° 20.000</span>.
+      {/* Stats hero */}
+      <div className="relative px-6 py-12 max-w-7xl mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+          {embudo?.etapas?.map(e => {
+            const sinDatos = e.n_casos === 0
+            return (
+              <div
+                key={e.etapa}
+                className="bg-[#1a1a1a] border border-[#2a2a2a] rounded p-4 border-t-2"
+                style={{ borderTopColor: STAGE_COLORS[e.etapa] }}
+              >
+                <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#8a8a8a] mb-2">
+                  {e.fuente} · {e.etapa}
+                </p>
+                {sinDatos ? (
+                  <p className="text-base sm:text-lg font-cal text-[#5a5a5a] mb-1 italic">
+                    Sin datos
+                  </p>
+                ) : (
+                  <p className="text-2xl sm:text-3xl font-cal text-[#f8f8f6] mb-1">
+                    {fmt(e.n_casos)}
+                  </p>
+                )}
+                <p className="text-xs text-[#b0b0b0]">{e.label}</p>
+                {e.es_aproximacion && !sinDatos && (
+                  <p className="text-[10px] text-[#ca8a04] mt-2" title={e.nota_metodologica || ''}>
+                    ⚠ Aproximación
+                  </p>
+                )}
+                {sinDatos && e.fuente === 'PJud' && (
+                  <p className="text-[10px] text-[#ca8a04] mt-2">
+                    Pendiente SAIP / auth
+                  </p>
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Tasa de atrición — solo si hay datos PJud reales */}
+        {totalPolicial > 0 && totalJudicial > 0 && tasaAtricion !== null && (
+          <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded p-6 mb-12">
+            <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#8a8a8a] mb-2">
+              Tasa de atrición — {embudo?.comuna_nombre ?? 'Nacional'}
             </p>
-          </div>
-        </div>
-
-        {/* Chart View */}
-        <div className="bg-[#1a1a1a] rounded border border-[#2a2a2a] p-8 sm:p-12">
-          <div className="flex justify-between items-start mb-12">
-            <div>
-              <h3 className="text-label-deep text-[#f8f8f6]">Fuerza Policial vs Defensa Pública</h3>
-              <p className="text-[10px] text-[#5a5a5a] uppercase tracking-widest mt-2">Top 20 comunas con mayor volumen de detenciones</p>
-            </div>
-            <div className="flex gap-4">
-               <div className="flex items-center gap-2">
-                 <div className="w-3 h-3 rounded-full bg-[#f8f8f6]"></div>
-                 <span className="text-[9px] font-bold uppercase tracking-widest text-[#b0b0b0]">Detenciones</span>
-               </div>
-               <div className="flex items-center gap-2">
-                 <div className="w-3 h-3 rounded-full bg-[#2a2a2a]"></div>
-                 <span className="text-[9px] font-bold uppercase tracking-widest text-[#b0b0b0]">Causas</span>
-               </div>
+            <div className="flex items-baseline gap-4">
+              <p className="text-4xl sm:text-5xl font-cal text-[#16a34a]">
+                {tasaAtricion.toFixed(2)}%
+              </p>
+              <p className="text-sm text-[#b0b0b0]">
+                {fmt(totalJudicial)} sentencias judiciales / {fmt(totalPolicial)} detenciones policiales
+              </p>
             </div>
           </div>
-          
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={chartData} margin={{ bottom: 60 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#2a2a2a" />
-              <XAxis 
-                dataKey="nombre" 
-                tick={{ fontSize: 9, fill: '#b0b0b0', fontWeight: 600 }} 
-                angle={-45} 
-                textAnchor="end" 
-                interval={0}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis 
-                tick={{ fontSize: 10, fill: '#b0b0b0' }} 
-                axisLine={false} 
-                tickLine={false} 
-                tickFormatter={v => `${(v/1000).toFixed(0)}k`} 
-              />
-              <Tooltip 
-                cursor={{ fill: '#2a2a2a' }}
-                contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '4px', fontSize: '10px' }}
-                itemStyle={{ color: '#f8f8f6' }}
-              />
-              <Bar dataKey="detenciones" fill="#f8f8f6" radius={[2, 2, 0, 0]} />
-              <Bar dataKey="causas_defensor" fill="#2a2a2a" radius={[2, 2, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Data Table */}
-        {error ? (
-          <div className="bg-[#1a1a1a] rounded border border-red-100 p-12 text-center">
-            <p className="text-sm text-red-500 font-bold mb-2">Error de Sincronización</p>
-            <p className="text-xs text-[#5a5a5a] uppercase tracking-widest">Ejecutar tarea ETL DPP para reconstruir caché</p>
-          </div>
-        ) : (
-          <TablaRanking items={filtered} search={search} onSearch={setSearch} />
         )}
 
-        <footer className="pt-12 border-t border-[#2a2a2a]">
-          <p className="text-[9px] uppercase tracking-[0.2em] text-[#5a5a5a]">
-            Análisis de Punitivismo Territorial · Observatorio Anonimous Canna v2.0
+        {/* Aviso explícito cuando falta etapa judicial */}
+        {totalPolicial > 0 && totalJudicial === 0 && (
+          <div className="bg-[#1a1a1a] border border-[#ca8a04]/40 rounded p-6 mb-12">
+            <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#ca8a04] mb-2">
+              Tasa de atrición — no calculable
+            </p>
+            <p className="text-sm text-[#e0c97a] leading-relaxed">
+              No se publican datos PJud porque aún no recibimos las sentencias originales
+              del Poder Judicial. Solicitud SAIP en gestión.
+            </p>
+          </div>
+        )}
+
+        {/* Sankey */}
+        <section className="mb-12">
+          <header className="mb-6">
+            <span className="chip bg-transparent text-[#b0b0b0] border-[#2a2a2a] mb-3">
+              Visualización · Diagrama de Sankey UNODC
+            </span>
+            <h2 className="text-h2-deep text-[#f8f8f6] mb-2">
+              Flujo del sistema penal · {embudo?.comuna_nombre ?? 'Nacional'} · {anio}
+            </h2>
+            <p className="text-sm text-[#8a8a8a] max-w-3xl">
+              Cada barra representa el volumen de casos en cada etapa. Las áreas grises
+              entre etapas son flujos; cuando el target es menor que el source, indica
+              caída del embudo (casos que no avanzaron a la siguiente etapa).
+            </p>
+          </header>
+          {sankey && (
+            <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded p-4 sm:p-6 overflow-x-auto">
+              <EmbudoSankey data={sankey} height={isMobile ? 280 : 380} />
+              <p className="text-xs text-[#5a5a5a] mt-4 max-w-3xl">
+                <strong className="text-[#8a8a8a]">Nota metodológica:</strong>{' '}
+                {sankey.nota_metodologica}
+              </p>
+            </div>
+          )}
+        </section>
+
+        {/* Ranking */}
+        <section className="mb-12">
+          <header className="mb-6">
+            <span className="chip bg-transparent text-[#b0b0b0] border-[#2a2a2a] mb-3">
+              Ranking · Top 50 comunas
+            </span>
+            <h2 className="text-h2-deep text-[#f8f8f6] mb-2">
+              Comunas con mayor intensidad policial
+            </h2>
+            <p className="text-sm text-[#8a8a8a] max-w-2xl">
+              Click en una comuna para ver su embudo individual. Ratio = sentencias
+              PJud / detenciones CEAD.
+            </p>
+          </header>
+          {ranking?.items?.length ? (
+            <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-[#0a0a0a] border-b border-[#2a2a2a]">
+                  <tr className="text-left">
+                    <th className="px-4 py-3 text-[10px] uppercase tracking-[0.15em] text-[#8a8a8a] font-bold">#</th>
+                    <th className="px-4 py-3 text-[10px] uppercase tracking-[0.15em] text-[#8a8a8a] font-bold">Comuna</th>
+                    <th className="px-4 py-3 text-[10px] uppercase tracking-[0.15em] text-[#8a8a8a] font-bold text-right">Detenciones (CEAD)</th>
+                    <th className="px-4 py-3 text-[10px] uppercase tracking-[0.15em] text-[#8a8a8a] font-bold text-right">Sentencias (PJud)</th>
+                    <th className="px-4 py-3 text-[10px] uppercase tracking-[0.15em] text-[#8a8a8a] font-bold text-right">Ratio</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ranking.items.map((it, i) => (
+                    <tr
+                      key={it.comuna_id}
+                      className={`border-b border-[#2a2a2a] hover:bg-[#0a0a0a] cursor-pointer transition-colors ${
+                        comunaId === it.comuna_id ? 'bg-[#0a0a0a]' : ''
+                      }`}
+                      onClick={() => setComunaId(it.comuna_id)}
+                    >
+                      <td className="px-4 py-3 text-[#5a5a5a]">{i + 1}</td>
+                      <td className="px-4 py-3 text-[#f8f8f6] font-cal">{it.comuna_nombre}</td>
+                      <td className="px-4 py-3 text-right text-[#f8f8f6] font-cal">{fmt(it.n_policial)}</td>
+                      <td className="px-4 py-3 text-right font-cal" style={{ color: it.n_judicial === 0 ? '#5a5a5a' : '#f8f8f6' }}>
+                        {it.n_judicial === 0 ? '—' : fmt(it.n_judicial)}
+                      </td>
+                      <td className="px-4 py-3 text-right font-cal" style={{ color: it.n_judicial === 0 ? '#5a5a5a' : '#16a34a' }}>
+                        {it.n_judicial === 0 ? '—' : `${(it.ratio_policial_judicial * 100).toFixed(2)}%`}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-[#5a5a5a] text-sm">Sin datos para {anio}.</p>
+          )}
+        </section>
+
+        {/* Footer normativo */}
+        <footer className="mt-16 pt-8 border-t border-[#2a2a2a] text-xs text-[#5a5a5a] max-w-3xl">
+          <p>
+            <strong className="text-[#8a8a8a]">Distribución proporcional:</strong>{' '}
+            DPP y PDI son regionales. Para nivel comunal usamos pesos relativos
+            del CEAD: <em>n_comuna = n_region × (cead_comuna / cead_region)</em>.
+            Las etapas marcadas con ⚠ Aproximación lo indican explícitamente.
           </p>
         </footer>
       </div>

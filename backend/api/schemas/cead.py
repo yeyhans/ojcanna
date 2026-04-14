@@ -38,9 +38,12 @@ class StatsItem(BaseModel):
     nombre: str
     tasa_agregada: float
     frecuencia_total: float
+    # Solo presente cuando denominador=ine_2017; None si no hay match en ine_poblacion
+    tasa_recalculada: float | None = None
 
 
 class StatsResponse(BaseModel):
     anio: int
     subgrupos: list[str]
+    denominador_usado: str = "cead_oficial"
     stats: list[StatsItem]
