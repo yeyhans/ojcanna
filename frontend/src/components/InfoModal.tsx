@@ -315,11 +315,15 @@ const CONTENT: Record<InfoSource, SourceContent> = {
             <span className="font-mono text-[11px] bg-slate-100 px-1 py-0.5 rounded">
               causas_región = total_nacional × (peso_región / Σ pesos)
             </span>{' '}
-            donde el peso regional es el total de imputados de todos los delitos en la DPP. Luego,
-            por comuna:{' '}
+            donde el peso regional es el total de imputados de{' '}
+            <span className="font-semibold text-slate-700">todos los delitos</span> en la DPP (no
+            específico de drogas). Luego, por comuna:{' '}
             <span className="font-mono text-[11px] bg-slate-100 px-1 py-0.5 rounded">
               causas_comuna = causas_región × (det_comuna / det_región)
             </span>
+            . Esta información también está disponible directamente en la tabla, marcada con la
+            insignia <span className="font-semibold text-amber-700">≈ estimado</span> junto a cada
+            valor de Causas DPP, sin necesidad de abrir este panel.
           </>
         ),
       },

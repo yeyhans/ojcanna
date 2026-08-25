@@ -28,6 +28,8 @@ class RankingItem(BaseModel):
     detenciones: float
     causas_defensor: float
     ratio: float           # causas_defensor / detenciones (0-1, indica selectividad)
+    peso_regional_pct: float  # peso de la región dentro de la distribución nacional DPP ([0-1], 0 si la región no tiene datos DPP)
+    es_estimado: bool = True  # causas_defensor siempre es una estimación por distribución proporcional
 
 
 class EmbudoRankingResponse(BaseModel):

@@ -114,7 +114,8 @@ dpp_total_nacional AS (
 causas_por_region AS (
     -- Causas drogas estimadas por región = nacional × (peso_region / suma_pesos)
     SELECT dp.region_id,
-           (dp.peso_region / NULLIF(SUM(dp.peso_region) OVER (), 0)) * tn.causas_drogas AS causas_region
+           (dp.peso_region / NULLIF(SUM(dp.peso_region) OVER (), 0)) * tn.causas_drogas AS causas_region,
+           dp.peso_region / NULLIF(SUM(dp.peso_region) OVER (), 0)                       AS peso_regional_pct
     FROM dpp_pesos dp, dpp_total_nacional tn
 ),
 causas_por_comuna AS (
@@ -125,7 +126,8 @@ causas_por_comuna AS (
                WHEN COALESCE(cr.det_region, 0) > 0
                THEN COALESCE(cpr.causas_region, 0) * (ce.detenciones / cr.det_region)
                ELSE 0
-           END AS causas_estimadas
+           END AS causas_estimadas,
+           COALESCE(cpr.peso_regional_pct, 0) AS peso_regional_pct
     FROM cead ce
     JOIN comunas c       ON c.cut        = ce.comuna_id
     LEFT JOIN cead_region cr  ON cr.region_id = c.region_id
@@ -140,7 +142,8 @@ SELECT
     CASE
         WHEN cc.detenciones > 0 THEN cc.causas_estimadas / cc.detenciones
         ELSE 0
-    END AS ratio
+    END AS ratio,
+    cc.peso_regional_pct
 FROM causas_por_comuna cc
 JOIN comunas co ON co.cut = cc.comuna_id
 WHERE cc.detenciones > 0
@@ -222,6 +225,7 @@ async def embudo_ranking(
             detenciones=float(r["detenciones"]),
             causas_defensor=float(r["causas_defensor"]),
             ratio=float(r["ratio"]),
+            peso_regional_pct=float(r["peso_regional_pct"]),
         )
         for r in rows
     ]

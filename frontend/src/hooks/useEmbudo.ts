@@ -23,6 +23,8 @@ export interface RankingItem {
   detenciones: number
   causas_defensor: number
   ratio: number
+  peso_regional_pct: number
+  es_estimado: boolean
 }
 
 interface UseEmbudoResult {

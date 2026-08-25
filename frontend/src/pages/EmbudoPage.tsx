@@ -9,6 +9,7 @@ import {
 import { useEmbudoRanking } from '../hooks/useEmbudo'
 import { useDppFiltros } from '../hooks/useDppAnalytics'
 import { useIsMobile } from '../hooks/useIsMobile'
+import { EstimadoBadge } from '../components/EstimadoBadge'
 
 function RatioBadge({ ratio }: { ratio: number }) {
   const pct = Math.round(ratio * 100)
@@ -31,6 +32,8 @@ interface EmbudoItem {
   detenciones: number
   causas_defensor: number
   ratio: number
+  peso_regional_pct: number
+  es_estimado: boolean
 }
 
 function TablaRanking({
@@ -53,6 +56,11 @@ function TablaRanking({
           <p className="text-xs text-slate-400 mt-0.5">
             {items.length > 0 ? `${items.length} comunas con detenciones Ley 20.000 — ` : ''}
             Ordenadas por mayor ratio
+          </p>
+          <p className="text-xs text-amber-700 mt-1">
+            <EstimadoBadge className="mr-1 align-middle" />
+            Causas DPP estimadas: nacional × peso regional de imputados de{' '}
+            <span className="font-medium">todos los delitos</span> (proxy no específico de drogas).
           </p>
         </div>
         <input
@@ -86,8 +94,16 @@ function TablaRanking({
                 </div>
                 <div>
                   <span className="text-slate-500">Causas DPP: </span>
+                  <EstimadoBadge className="align-middle mr-1" />
                   {item.causas_defensor > 0
-                    ? <span className="font-mono text-violet-600 font-medium">{fmt(Math.round(item.causas_defensor))}</span>
+                    ? (
+                      <>
+                        <span className="font-mono text-violet-600 font-medium">{fmt(Math.round(item.causas_defensor))}</span>
+                        <span className="text-slate-400 text-[10px] ml-1">
+                          ({Math.round(item.peso_regional_pct * 100)}% peso región)
+                        </span>
+                      </>
+                    )
                     : <span className="text-slate-300">—</span>
                   }
                 </div>
@@ -105,7 +121,11 @@ function TablaRanking({
                 <th className="px-5 py-3 text-left">Comuna</th>
                 <th className="px-5 py-3 text-left">Región</th>
                 <th className="px-4 py-3 text-right">Detenciones CEAD</th>
-                <th className="px-4 py-3 text-right">Causas DPP</th>
+                <th className="px-4 py-3 text-right">
+                  <span className="inline-flex items-center gap-1">
+                    Causas DPP <EstimadoBadge />
+                  </span>
+                </th>
                 <th className="px-4 py-3 text-right">Ratio</th>
               </tr>
             </thead>
@@ -120,7 +140,15 @@ function TablaRanking({
                   </td>
                   <td className="px-4 py-2.5 text-right tabular-nums text-violet-600 font-medium">
                     {item.causas_defensor > 0
-                      ? fmt(Math.round(item.causas_defensor))
+                      ? (
+                        <>
+                          <EstimadoBadge className="align-middle mr-1" />
+                          {fmt(Math.round(item.causas_defensor))}
+                          <span className="block text-[10px] text-slate-400 font-normal">
+                            {Math.round(item.peso_regional_pct * 100)}% peso región
+                          </span>
+                        </>
+                      )
                       : <span className="text-slate-300">—</span>
                     }
                   </td>
@@ -263,16 +291,25 @@ export default function EmbudoPage() {
                     width={isMobile ? 36 : 45}
                   />
                   <Tooltip
-                    formatter={(v, name) => [fmt(Number(v)), name === 'detenciones' ? 'Detenciones CEAD' : 'Causas DPP']}
+                    formatter={(v, name) => [fmt(Number(v)), name === 'detenciones' ? 'Detenciones CEAD' : 'Causas DPP (≈ estimado)']}
                     labelFormatter={(l, payload) => ((payload as unknown) as Array<{ payload?: { fullNombre?: string } }>)?.[0]?.payload?.fullNombre ?? String(l)}
                   />
                   <RLegend
                     iconType="square"
                     wrapperStyle={{ fontSize: 11 }}
-                    formatter={v => <span className="text-xs text-slate-600">{v === 'detenciones' ? 'Detenciones CEAD' : 'Causas DPP'}</span>}
+                    formatter={v => <span className="text-xs text-slate-600">{v === 'detenciones' ? 'Detenciones CEAD' : 'Causas DPP (≈ estimado)'}</span>}
                   />
                   <Bar dataKey="detenciones" fill="#3b82f6" name="detenciones" stackId="a" />
-                  <Bar dataKey="causas_defensor" fill="#8b5cf6" name="causas_defensor" stackId="b" radius={[4, 4, 0, 0]} />
+                  <Bar
+                    dataKey="causas_defensor"
+                    fill="#8b5cf6"
+                    fillOpacity={0.65}
+                    stroke="#8b5cf6"
+                    strokeDasharray="3 2"
+                    name="causas_defensor"
+                    stackId="b"
+                    radius={[4, 4, 0, 0]}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>

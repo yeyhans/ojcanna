@@ -12,6 +12,22 @@ en causas de cannabis. Fuentes: CEAD (policiales) y PJud (sentencias).
 - **ETL**: Python, Playwright (mapper), httpx async (extractor), pandas+SQLAlchemy (consolidator)
 - **NLP** (futuro): spaCy, Transformers — clasificación de sentencias PJud
 
+## Despliegue y Rendimiento
+- **Producción**: transparencia.dispensai.cl (frontend Vercel, backend Render).
+- **Backend (Render, plan Free)**: se duerme tras ~15 min de inactividad. Primer request tras
+  dormir tarda 30-50s en responder (cold start) — es la causa principal de la demora en carga
+  reportada por el usuario. Opciones a evaluar: upgrade a plan pago, cron de keep-alive externo
+  (ping a `/health` cada <15 min), o migrar a un runtime que no duerma (Fly.io, Cloudflare Workers).
+- **Base de datos (Neon serverless)**: también puede tener cold-start propio si el compute se
+  suspendió por inactividad, independiente del sleep de Render.
+- **Scraping/ETL**: se ejecuta 100% local y offline (`backend/etl/cead/runner.py` contra
+  `DATABASE_URL` de Neon). La API en producción **nunca** hace scraping en runtime — solo lee
+  datos ya consolidados en PostgreSQL. No agregar llamadas a fuentes externas (CEAD, DPP, PDI)
+  desde los endpoints de `api/routers/`.
+- **Cache ya implementado**: `app.state.geom_cache` (geometrías de 344 comunas, cargadas una vez
+  en `lifespan`) + `_RESPONSE_CACHE` in-memory por `(anio, subgrupos)` en `cead.py`. Ambos se
+  pierden en cada cold start/redeploy — no son persistentes entre instancias.
+
 ## Estructura del Proyecto
 ```
 anonimouscanna/
