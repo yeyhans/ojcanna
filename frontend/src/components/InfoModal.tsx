@@ -9,20 +9,41 @@ interface Props {
   source?: InfoSource
 }
 
-const CONTENT: Record<InfoSource, { color: string; sections: { title: string; body: React.ReactNode }[] }> = {
+interface SourceContent {
+  titulo: string
+  color: string
+  accentBg: string
+  sections: { title: string; body: React.ReactNode }[]
+}
+
+const CONTENT: Record<InfoSource, SourceContent> = {
   cead: {
+    titulo: 'Mapa de Detenciones CEAD',
     color: 'text-blue-600',
+    accentBg: 'bg-blue-50',
     sections: [
+      {
+        title: '¿Qué es?',
+        body: (
+          <>
+            Mapa coroplético interactivo que visualiza la{' '}
+            <span className="font-semibold text-slate-700">persecución policial por drogas</span> en
+            las 346 comunas de Chile. Muestra la frecuencia de hechos policiales y la tasa por 100.000
+            habitantes registrados bajo la Ley N° 20.000, permitiendo identificar zonas de alta
+            concentración punitiva y comparar comunas de tamaños distintos.
+          </>
+        ),
+      },
       {
         title: 'Origen de los datos',
         body: (
           <>
             Los datos provienen del{' '}
-            <span className="font-medium text-slate-700">CEAD</span>{' '}
-            (Centro de Estudios y Análisis del Delito) de la Subsecretaría de Prevención del Delito.
-            El portal no ofrece descarga masiva, por lo que se realizó una extracción automatizada
-            mediante ingeniería inversa de las peticiones HTTP, iterando sobre cada combinación de
-            año, región y comuna con{' '}
+            <span className="font-semibold text-slate-700">CEAD</span>{' '}
+            (Centro de Estudios y Análisis del Delito) de la Subsecretaría de Prevención del Delito,
+            Ministerio del Interior. El portal publica estadísticas delictuales por comuna desde 2005.
+            La extracción se realizó mediante ingeniería inversa de las peticiones HTTP del portal,
+            iterando sobre cada combinación de año, región y comuna con{' '}
             <span className="font-mono text-[11px] bg-slate-100 px-1 py-0.5 rounded">httpx</span>{' '}
             asíncrono y checkpoints para tolerar interrupciones.
           </>
@@ -32,9 +53,10 @@ const CONTENT: Record<InfoSource, { color: string; sections: { title: string; bo
         title: '¿Qué son los Casos?',
         body: (
           <>
-            La <span className="font-medium text-slate-700">frecuencia total</span> de hechos
-            policiales registrados bajo la Ley N° 20.000 (drogas) en la comuna para el año y
-            subgrupos de delitos seleccionados en los filtros.
+            La <span className="font-semibold text-slate-700">frecuencia total</span> de hechos
+            policiales registrados bajo la Ley N° 20.000 (drogas) en la comuna, para el año y
+            subgrupos de delitos seleccionados. Incluye: tráfico, microtráfico, consumo, porte,
+            cultivo, elaboración y otros delitos de la ley de drogas.
           </>
         ),
       },
@@ -43,9 +65,20 @@ const CONTENT: Record<InfoSource, { color: string; sections: { title: string; bo
         body: (
           <>
             Los casos normalizados por la{' '}
-            <span className="font-medium text-slate-700">población comunal</span> (proyección INE),
+            <span className="font-semibold text-slate-700">población comunal</span> (proyección INE),
             expresados por cada 100.000 habitantes. Permite comparar comunas de tamaños muy distintos
-            sin que las más grandes distorsionen el mapa.
+            sin que las más pobladas distorsionen el mapa.
+          </>
+        ),
+      },
+      {
+        title: 'Cobertura',
+        body: (
+          <>
+            <span className="font-semibold text-slate-700">Temporal:</span> 2005–2024 (dos taxonomías:
+            DMCS_legacy hasta 2023, Taxonomía_2024 desde 2024).{' '}
+            <span className="font-semibold text-slate-700">Geográfica:</span> 344 de 346 comunas
+            (Pozo Almonte y Antártica no tienen geometría en GADM v4.1).
           </>
         ),
       },
@@ -55,13 +88,14 @@ const CONTENT: Record<InfoSource, { color: string; sections: { title: string; bo
           <ul className="flex flex-col gap-1.5">
             {[
               { label: 'Datos delictuales', value: 'CEAD / Subsecretaría de Prevención del Delito' },
-              { label: 'Geometrías',        value: 'GADM v4.1' },
-              { label: 'Cartografía base',  value: '© CARTO, © OpenStreetMap contributors' },
-              { label: 'Motor de mapas',    value: 'MapLibre GL JS' },
-              { label: 'Plataforma',        value: 'dispensai.cl' },
+              { label: 'Geometrías',        value: 'GADM v4.1 (Global Administrative Areas Database)' },
+              { label: 'Cartografía base',  value: '© CARTO Positron, © OpenStreetMap contributors' },
+              { label: 'Motor de mapas',    value: 'MapLibre GL JS (WebGL)' },
+              { label: 'Visualización',     value: 'Recharts, Framer Motion' },
+              { label: 'Plataforma',        value: 'Observatorio Judicial Cannábico — dispensai.cl' },
             ].map(({ label, value }) => (
               <li key={label} className="flex items-baseline gap-2">
-                <span className="text-[11px] font-medium text-slate-400 shrink-0 w-28">{label}</span>
+                <span className="text-[11px] font-semibold text-slate-400 shrink-0 w-28">{label}</span>
                 <span className="text-xs text-slate-600">{value}</span>
               </li>
             ))}
@@ -72,16 +106,33 @@ const CONTENT: Record<InfoSource, { color: string; sections: { title: string; bo
   },
 
   dpp: {
-    color: 'text-emerald-600',
+    titulo: 'Defensoría Penal Pública',
+    color: 'text-blue-600',
+    accentBg: 'bg-blue-50',
     sections: [
+      {
+        title: '¿Qué es?',
+        body: (
+          <>
+            Dashboard analítico que presenta las{' '}
+            <span className="font-semibold text-slate-700">causas penales por Ley de Drogas</span>{' '}
+            (Ley N° 20.000) gestionadas por la Defensoría Penal Pública de Chile. Permite analizar
+            ingresos, términos, formas de resolución (condena, absolución, salidas alternativas) y
+            la distribución regional de imputados representados por defensores públicos.
+          </>
+        ),
+      },
       {
         title: 'Origen de los datos',
         body: (
           <>
             Los datos provienen del{' '}
-            <span className="font-medium text-slate-700">SIGDP</span> (Sistema de Gestión de la
-            Defensoría Penal Pública). La DPP publica anualmente estadísticas de ingresos, términos
-            y formas de término para causas representadas por defensores públicos.
+            <span className="font-semibold text-slate-700">SIGDP</span> (Sistema Informático de
+            Gestión de la Defensa Pública). La DPP publica anualmente boletines estadísticos con
+            el detalle de causas ingresadas, terminadas y formas de resolución. Los archivos Excel
+            fueron descargados de{' '}
+            <span className="font-semibold text-slate-700">dpp.cl/estadísticas</span> y procesados
+            mediante un pipeline ETL en Python.
           </>
         ),
       },
@@ -90,13 +141,11 @@ const CONTENT: Record<InfoSource, { color: string; sections: { title: string; bo
         body: (
           <>
             Los datos de{' '}
-            <span className="font-medium text-slate-700">Delitos Ley de Drogas</span> (Ley N° 20.000)
-            están disponibles únicamente a nivel{' '}
-            <span className="font-medium text-slate-700">nacional</span>. No existe desglose comunal
-            ni regional específico para drogas en los registros públicos de la DPP. Los datos
-            regionales que aparecen en este módulo corresponden al{' '}
-            <span className="font-medium text-slate-700">total de causas</span> de todos los delitos
-            (usados como pesos de distribución proporcional).
+            <span className="font-semibold text-slate-700">Ley de Drogas</span> están disponibles
+            únicamente a nivel <span className="font-semibold text-slate-700">nacional</span>. No
+            existe desglose comunal ni regional específico para drogas. Los datos regionales de
+            imputados que aparecen corresponden al total de todos los delitos (no exclusivamente
+            drogas) y se usan como pesos de distribución proporcional en el módulo Embudo.
           </>
         ),
       },
@@ -104,10 +153,25 @@ const CONTENT: Record<InfoSource, { color: string; sections: { title: string; bo
         title: 'Formas de término',
         body: (
           <>
-            Incluye: Absolución, Condena, Salida Alternativa (suspensión condicional, acuerdo
-            reparatorio), Facultativos (sobreseimiento, archivo provisional), y Derivación a
-            tribunal de familia u otro. El porcentaje refleja la composición del total de causas
-            con término en el año seleccionado.
+            Las causas pueden terminar en:{' '}
+            <span className="font-semibold text-slate-700">Condena</span> (pena efectiva),{' '}
+            <span className="font-semibold text-slate-700">Absolución</span>,{' '}
+            <span className="font-semibold text-slate-700">Salida Alternativa</span> (suspensión
+            condicional, acuerdo reparatorio),{' '}
+            <span className="font-semibold text-slate-700">Facultativos de Fiscalía</span>{' '}
+            (sobreseimiento, archivo provisional),{' '}
+            <span className="font-semibold text-slate-700">Derivación</span> a otro tribunal, u{' '}
+            <span className="font-semibold text-slate-700">Otras formas</span>.
+          </>
+        ),
+      },
+      {
+        title: 'Cobertura',
+        body: (
+          <>
+            <span className="font-semibold text-slate-700">Temporal:</span> 2020–2024.{' '}
+            <span className="font-semibold text-slate-700">Geográfica:</span> Nacional (ingresos y
+            términos por drogas), Regional (total de imputados, todos los delitos).
           </>
         ),
       },
@@ -117,10 +181,12 @@ const CONTENT: Record<InfoSource, { color: string; sections: { title: string; bo
           <ul className="flex flex-col gap-1.5">
             {[
               { label: 'Datos judiciales', value: 'Defensoría Penal Pública (DPP) — SIGDP' },
-              { label: 'Plataforma',       value: 'dispensai.cl' },
+              { label: 'Procesamiento',    value: 'Pipeline ETL Python (pandas, openpyxl)' },
+              { label: 'Visualización',    value: 'Recharts (donut, línea temporal, barras)' },
+              { label: 'Plataforma',       value: 'Observatorio Judicial Cannábico — dispensai.cl' },
             ].map(({ label, value }) => (
               <li key={label} className="flex items-baseline gap-2">
-                <span className="text-[11px] font-medium text-slate-400 shrink-0 w-28">{label}</span>
+                <span className="text-[11px] font-semibold text-slate-400 shrink-0 w-28">{label}</span>
                 <span className="text-xs text-slate-600">{value}</span>
               </li>
             ))}
@@ -131,41 +197,54 @@ const CONTENT: Record<InfoSource, { color: string; sections: { title: string; bo
   },
 
   pdi: {
+    titulo: 'Policía de Investigaciones',
     color: 'text-purple-600',
+    accentBg: 'bg-purple-50',
     sections: [
+      {
+        title: '¿Qué es?',
+        body: (
+          <>
+            Dashboard de estadísticas de la{' '}
+            <span className="font-semibold text-slate-700">PDI</span> (Policía de Investigaciones de
+            Chile) sobre delitos investigados, denuncias recibidas y víctimas registradas bajo la
+            Ley N° 20.000 y normas relacionadas. Permite visualizar la distribución regional de la
+            actividad investigativa policial en materia de drogas.
+          </>
+        ),
+      },
       {
         title: 'Origen de los datos',
         body: (
           <>
-            Los datos provienen de la{' '}
-            <span className="font-medium text-slate-700">PDI</span> (Policía de Investigaciones de
-            Chile) a través de{' '}
-            <span className="font-medium text-slate-700">datos.gob.cl</span>, publicados desde la
-            Base Relacional para Análisis e Información (BRAIN). Incluyen estadísticas de delitos
-            investigados, denuncias recibidas y víctimas registradas bajo la Ley N° 20.000.
+            Los datos provienen de la base{' '}
+            <span className="font-semibold text-slate-700">BRAIN</span> (Base Relacional para
+            Análisis e Información) de la PDI, publicados en el portal de datos abiertos{' '}
+            <span className="font-semibold text-slate-700">datos.gob.cl</span> del Gobierno de Chile.
+            Los archivos CSV fueron descargados y procesados mediante un pipeline ETL en Python.
           </>
         ),
       },
       {
-        title: 'Granularidad',
+        title: 'Categorías y subcategorías',
         body: (
           <>
-            La PDI publica estos datos a nivel{' '}
-            <span className="font-medium text-slate-700">regional</span> (16 regiones). No existe
-            desglose comunal. Todas las comunas de una región comparten el mismo valor regional.
-            La cobertura actual es 2024.
-          </>
-        ),
-      },
-      {
-        title: 'Categorías disponibles',
-        body: (
-          <>
-            <span className="font-medium text-slate-700">Crímenes y simples delitos Ley N° 20.000</span>{' '}
+            Dos categorías principales:{' '}
+            <span className="font-semibold text-slate-700">Crímenes y simples delitos Ley N° 20.000</span>{' '}
             (tráfico, microtráfico, elaboración) y{' '}
-            <span className="font-medium text-slate-700">Consumo de alcohol y drogas en vía pública</span>.
-            Cada categoría se desglosa en tres subcategorías: delitos investigados, denuncias
-            recibidas y víctimas registradas.
+            <span className="font-semibold text-slate-700">Consumo en vía pública</span>.
+            Cada una se desglosa en tres subcategorías: delitos investigados (casos con investigación
+            formal), denuncias recibidas (reportes ciudadanos), y víctimas registradas.
+          </>
+        ),
+      },
+      {
+        title: 'Cobertura',
+        body: (
+          <>
+            <span className="font-semibold text-slate-700">Temporal:</span> 2024.{' '}
+            <span className="font-semibold text-slate-700">Geográfica:</span> Regional (16 regiones
+            de Chile). No existe desglose comunal en los datos publicados por la PDI.
           </>
         ),
       },
@@ -175,10 +254,13 @@ const CONTENT: Record<InfoSource, { color: string; sections: { title: string; bo
           <ul className="flex flex-col gap-1.5">
             {[
               { label: 'Datos policiales', value: 'PDI — BRAIN (datos.gob.cl)' },
-              { label: 'Plataforma',       value: 'dispensai.cl' },
+              { label: 'Datos abiertos',   value: 'Gobierno de Chile — datos.gob.cl' },
+              { label: 'Procesamiento',    value: 'Pipeline ETL Python (pandas)' },
+              { label: 'Visualización',    value: 'Recharts (barras verticales y horizontales)' },
+              { label: 'Plataforma',       value: 'Observatorio Judicial Cannábico — dispensai.cl' },
             ].map(({ label, value }) => (
               <li key={label} className="flex items-baseline gap-2">
-                <span className="text-[11px] font-medium text-slate-400 shrink-0 w-28">{label}</span>
+                <span className="text-[11px] font-semibold text-slate-400 shrink-0 w-28">{label}</span>
                 <span className="text-xs text-slate-600">{value}</span>
               </li>
             ))}
@@ -189,18 +271,37 @@ const CONTENT: Record<InfoSource, { color: string; sections: { title: string; bo
   },
 
   embudo: {
+    titulo: 'Embudo del Punitivismo',
     color: 'text-emerald-600',
+    accentBg: 'bg-emerald-50',
     sections: [
       {
-        title: '¿Qué es el Embudo del Punitivismo?',
+        title: '¿Qué es?',
         body: (
           <>
-            Visualiza la cadena de persecución penal por Ley N° 20.000 en tres etapas:{' '}
-            <span className="font-medium text-slate-700">detenciones policiales</span> (CEAD) →{' '}
-            <span className="font-medium text-slate-700">causas en la Defensoría</span> (DPP) →{' '}
-            <span className="font-medium text-slate-700">investigaciones PDI</span>. El objetivo es
-            estimar qué fracción de personas detenidas accede a representación legal pública y
-            cuántas terminan con investigación formal.
+            Análisis cruzado que visualiza la{' '}
+            <span className="font-semibold text-slate-700">cadena de persecución penal</span> por
+            Ley N° 20.000 en tres etapas:{' '}
+            <span className="font-semibold text-blue-600">detenciones policiales</span> (CEAD) →{' '}
+            <span className="font-semibold text-violet-600">causas en la Defensoría</span> (DPP) →{' '}
+            <span className="font-semibold text-emerald-600">investigaciones PDI</span>.
+            Estima qué fracción de personas detenidas por drogas accede a representación legal
+            pública y permite comparar la intensidad punitiva entre comunas.
+          </>
+        ),
+      },
+      {
+        title: 'Origen de los datos',
+        body: (
+          <>
+            Combina tres fuentes de datos públicos:{' '}
+            <span className="font-semibold text-slate-700">CEAD</span> (detenciones comunales por
+            drogas, Subsecretaría de Prevención del Delito),{' '}
+            <span className="font-semibold text-slate-700">DPP</span> (causas Ley 20.000 a nivel
+            nacional, Defensoría Penal Pública), y{' '}
+            <span className="font-semibold text-slate-700">PDI</span> (investigaciones regionales,
+            datos.gob.cl). Cada fuente tiene granularidad distinta, por lo que se aplica distribución
+            proporcional para estimar valores comunales.
           </>
         ),
       },
@@ -209,8 +310,8 @@ const CONTENT: Record<InfoSource, { color: string; sections: { title: string; bo
         body: (
           <>
             Los datos DPP de drogas son{' '}
-            <span className="font-medium text-slate-700">nacionales</span> (no tienen desglose
-            regional). Para estimar causas por región se usa distribución proporcional:{' '}
+            <span className="font-semibold text-slate-700">nacionales</span>. Para estimar causas
+            por región se usa distribución proporcional:{' '}
             <span className="font-mono text-[11px] bg-slate-100 px-1 py-0.5 rounded">
               causas_región = total_nacional × (peso_región / Σ pesos)
             </span>{' '}
@@ -226,27 +327,40 @@ const CONTENT: Record<InfoSource, { color: string; sections: { title: string; bo
         title: 'Interpretación del Ratio',
         body: (
           <>
-            El ratio = causas_DPP estimadas / detenciones CEAD. Un valor{' '}
-            <span className="font-medium text-slate-700">&gt; 100%</span> puede ocurrir cuando
-            la distribución regional genera más causas estimadas que detenciones locales (la
-            distribución es proporcional, no exacta). El ratio{' '}
-            <span className="font-medium text-red-600">no es una tasa de condena</span> — mide el
-            acceso a representación legal de la Defensoría, no el resultado judicial.
+            El <span className="font-semibold text-slate-700">ratio</span> = causas DPP estimadas /
+            detenciones CEAD. Un valor{' '}
+            <span className="font-semibold text-slate-700">&gt; 100%</span> puede ocurrir cuando la
+            distribución proporcional genera más causas estimadas que detenciones locales. El ratio{' '}
+            <span className="font-semibold text-red-600">no es una tasa de condena</span> — mide
+            el acceso estimado a representación legal de la Defensoría, no el resultado judicial final.
           </>
         ),
       },
       {
-        title: 'Fuentes',
+        title: 'Cobertura',
+        body: (
+          <>
+            <span className="font-semibold text-slate-700">Temporal:</span> 2020–2024 (intersección
+            de años disponibles en CEAD y DPP).{' '}
+            <span className="font-semibold text-slate-700">Geográfica:</span> Comunal (estimado por
+            distribución proporcional desde datos regionales/nacionales).
+          </>
+        ),
+      },
+      {
+        title: 'Contribuidores',
         body: (
           <ul className="flex flex-col gap-1.5">
             {[
               { label: 'Detenciones',      value: 'CEAD / Subsecretaría de Prevención del Delito' },
               { label: 'Causas',           value: 'Defensoría Penal Pública (DPP) — SIGDP' },
               { label: 'Investigaciones',  value: 'PDI — BRAIN (datos.gob.cl)' },
-              { label: 'Plataforma',       value: 'dispensai.cl' },
+              { label: 'Procesamiento',    value: 'Pipeline ETL Python (httpx, pandas, asyncpg)' },
+              { label: 'Visualización',    value: 'Recharts (barras apiladas), Framer Motion' },
+              { label: 'Plataforma',       value: 'Observatorio Judicial Cannábico — dispensai.cl' },
             ].map(({ label, value }) => (
               <li key={label} className="flex items-baseline gap-2">
-                <span className="text-[11px] font-medium text-slate-400 shrink-0 w-28">{label}</span>
+                <span className="text-[11px] font-semibold text-slate-400 shrink-0 w-28">{label}</span>
                 <span className="text-xs text-slate-600">{value}</span>
               </li>
             ))}
@@ -258,13 +372,13 @@ const CONTENT: Record<InfoSource, { color: string; sections: { title: string; bo
 }
 
 export function InfoModal({ open, onClose, source = 'cead' }: Props) {
-  const { color, sections } = CONTENT[source]
+  const { titulo, color, accentBg, sections } = CONTENT[source]
 
   return (
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-slate-900/30 backdrop-blur-[2px]"
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-slate-900/30 backdrop-blur-[2px]"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -272,28 +386,40 @@ export function InfoModal({ open, onClose, source = 'cead' }: Props) {
         >
           <motion.div
             className="
-              w-full max-w-sm
-              bg-white/90 backdrop-blur-xl
+              w-full sm:max-w-md
+              bg-white/95 backdrop-blur-xl
               border border-white/40
-              rounded-2xl shadow-2xl shadow-slate-400/20
+              rounded-t-2xl sm:rounded-2xl
+              shadow-2xl shadow-slate-400/20
               overflow-hidden
+              max-h-[85vh] sm:max-h-[80vh]
+              flex flex-col
             "
-            initial={{ opacity: 0, scale: 0.97, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.97, y: 10 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
             transition={{ type: 'spring', damping: 28, stiffness: 280 }}
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Drag indicator mobile */}
+            <div className="sm:hidden flex justify-center pt-2">
+              <div className="w-10 h-1 bg-slate-300 rounded-full" />
+            </div>
+
             {/* Header */}
-            <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-slate-100">
-              <h2 className="text-sm font-bold text-slate-800">Sobre los datos</h2>
+            <div className={`flex items-center justify-between px-5 pt-3 sm:pt-4 pb-3 border-b border-slate-100 ${accentBg}`}>
+              <div>
+                <h2 className="text-sm font-bold text-slate-800">Sobre los datos</h2>
+                <p className={`text-xs font-semibold ${color} mt-0.5`}>{titulo}</p>
+              </div>
               <button
                 onClick={onClose}
                 aria-label="Cerrar"
                 className="
-                  w-7 h-7 flex items-center justify-center
-                  rounded-full bg-slate-100 hover:bg-slate-200
-                  text-slate-500 text-lg leading-none
+                  min-w-[44px] min-h-[44px]
+                  flex items-center justify-center
+                  rounded-full bg-white/60 hover:bg-white
+                  text-slate-500 text-xl leading-none
                   transition-colors shrink-0
                 "
               >
@@ -302,7 +428,7 @@ export function InfoModal({ open, onClose, source = 'cead' }: Props) {
             </div>
 
             {/* Content */}
-            <div className="px-5 py-4 flex flex-col gap-5 overflow-y-auto max-h-[75vh]">
+            <div className="px-5 py-4 flex flex-col gap-5 overflow-y-auto flex-1">
               {sections.map(({ title, body }) => (
                 <section key={title} className="flex flex-col gap-1.5">
                   <h3 className={`text-xs font-semibold uppercase tracking-wider ${color}`}>
@@ -311,6 +437,13 @@ export function InfoModal({ open, onClose, source = 'cead' }: Props) {
                   <div className="text-xs text-slate-600 leading-relaxed">{body}</div>
                 </section>
               ))}
+            </div>
+
+            {/* Footer */}
+            <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50">
+              <p className="text-[11px] text-slate-400 text-center">
+                Observatorio Judicial Cannábico · Plataforma de fiscalización cívica
+              </p>
             </div>
           </motion.div>
         </motion.div>
