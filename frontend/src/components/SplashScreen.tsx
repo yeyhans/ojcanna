@@ -46,6 +46,8 @@ export function SplashScreen({ visible, progress }: SplashScreenProps) {
             src={bgImage}
             alt=""
             aria-hidden
+            fetchPriority="low"
+            decoding="async"
             style={{
               position: 'absolute',
               inset: 0,

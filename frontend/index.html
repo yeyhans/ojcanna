@@ -52,8 +52,10 @@
     <link rel="preload" as="fetch" href="/api/v1/cead/filtros" crossorigin />
     <link rel="preload" as="fetch" href="/api/v1/cead/geometrias" crossorigin />
 
-    <!-- Preload de la fuente para evitar FOUT del título principal -->
-    <link rel="preload" as="font" type="font/ttf" href="/fonts/CalSans-Regular.ttf" crossorigin />
+    <!-- CalSans solo se usa en el título decorativo del SplashScreen, no en el
+         mapa. Prioridad baja: no debe competir por ancho de banda con los
+         fetches críticos de CEAD (filtros/geometrías) de arriba. -->
+    <link rel="preload" as="font" type="font/ttf" href="/fonts/CalSans-Regular.ttf" crossorigin fetchpriority="low" />
   </head>
   <body>
     <div id="root"></div>

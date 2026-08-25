@@ -2,17 +2,20 @@
 //
 // Context que arranca al montar la app y orquesta la carga inicial:
 //
-//   Step 1 (await):    /api/v1/cead/filtros           → 33%
-//   Step 2 (parallel): /api/v1/cead/geometrias  ┐
-//                      /api/v1/cead/stats?...   ┘    → 100%
-//   Step 3 (idle):     prefetch DPP/PDI/Embudo + chunks lazy de páginas
+//   Step 1 (await):    /api/v1/cead/filtros           → 20%
+//   Step 2 (await):    /api/v1/cead/geometrias  ┐
+//                      /api/v1/cead/stats?...   ┘    → 70%  ← isAppReady=true, splash se oculta
+//   Step 3 (background, NO bloquea): DPP/PDI/Fiscalía + chunks lazy → 100%
 //
-// Geom y stats van en PARALELO porque no dependen entre sí. El splash termina
-// cuando ambos resuelven (max(t_geom, t_stats)) en vez de la suma.
+// Geom y stats van en PARALELO porque no dependen entre sí. `isAppReady`
+// significa "el mapa CEAD tiene lo que necesita para pintar" — NO implica
+// que la analítica de otras fuentes ya esté cacheada (eso corre en background
+// en Step 3 y no tiene flag propio; cada página analítica maneja su propio
+// loading state si el usuario navega antes de que termine).
 //
-// Splash como presentación: el splash se muestra SIEMPRE en cada montaje
-// con una duración mínima de SPLASH_MIN_MS para que la animación sea
-// apreciable aún con datos cacheados.
+// Splash como presentación: en la primera visita se muestra con una duración
+// mínima de SPLASH_MIN_MS para que la animación sea apreciable. Con
+// sessionStorage caliente (`hasAnySessionData`) esa espera mínima se salta.
 
 import {
   createContext,
@@ -23,16 +26,17 @@ import {
   type ReactNode,
 } from 'react'
 import type { FiltrosResponse } from '../types/cead'
-import { dataStore } from '../store/dataStore'
+import { dataStore, hasAnySessionData } from '../store/dataStore'
 import { fetchComunasGeom } from '../store/geomStore'
 import { urlCache } from '../store/urlCache'
 
-// Tiempo mínimo que el splash queda visible aunque la data ya esté cacheada.
-// 1500 ms: presentación profesional sin frustrar al usuario. Cuando el splash
-// desaparece, CEAD + DPP + PDI + Embudo ya están hot en caché (ver init()).
+// Tiempo mínimo que el splash queda visible en la PRIMERA visita (sin cache).
+// En visitas con sessionStorage caliente (hasAnySessionData) el splash no
+// fuerza espera — el mapa aparece apenas los datos CEAD están listos.
 const SPLASH_MIN_MS = 2000
 
 interface AppDataContextValue {
+  /** true cuando geom+stats de CEAD están listos — NO implica que DPP/PDI/Fiscalía ya cargaron. */
   isAppReady: boolean
   filtros: FiltrosResponse | null
   showSplash: boolean
@@ -132,6 +136,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     initialized.current = true
 
     const startedAt = Date.now()
+    let step1Ok = false
 
     async function init() {
       try {
@@ -141,31 +146,42 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         const data: FiltrosResponse = await res.json()
         setFiltros(data)
         setProgress(20)
+        step1Ok = true
 
         const lastAnio = Math.max(...data.anios)
         const subgrupos = data.subgrupos.map((s) => s.id)
 
-        // Step 2: TODOS los datasets en paralelo. Cuando el splash desaparezca,
-        // navegar a /dpp, /pdi o /embudo debe mostrar charts instantáneo.
-        // prefetchAnalytics() ya deduplica via urlCache.
+        // Step 2: SOLO lo que el mapa CEAD necesita para pintar (geom + stats).
+        // La analítica DPP/PDI/Fiscalía NO bloquea el splash — corre en
+        // background (ver finally) porque el usuario ya está viendo el mapa
+        // para cuando esos datos importan (navegar a /dpp, /pdi, etc).
         await Promise.all([
           fetchComunasGeom().then(() => setProgress(45)),
           dataStore.prefetch(lastAnio, subgrupos).then(() => setProgress(70)),
-          prefetchAnalytics().then(() => setProgress(95)),
         ])
-        setProgress(100)
+        setProgress(70)
       } catch {
         // Si algo falla, la app sigue funcionando — cada hook maneja su error
-        setProgress(100)
+        setProgress(70)
       } finally {
         setIsAppReady(true)
         // Step 3: chunks lazy en idle (no bloquean UI)
         prefetchLazyChunks()
 
-        // Garantizar duración mínima del splash (modo presentación).
-        // Si la data llegó antes de SPLASH_MIN_MS, esperamos lo que falta.
+        // Analítica DPP/PDI/Fiscalía en background — no bloquea el splash ni
+        // el primer render del mapa. Se salta si Step 1 falló (sin filtros no
+        // hay año/rango que asumir, y la sesión ya está en estado degradado).
+        if (step1Ok) {
+          void prefetchAnalytics()
+            .then(() => setProgress(100))
+            .catch(() => setProgress(100))
+        }
+
+        // Duración mínima del splash SOLO en la primera visita (sin cache).
+        // Con sessionStorage caliente (hasAnySessionData) no hay espera forzada.
         const elapsed = Date.now() - startedAt
-        const remaining = Math.max(0, SPLASH_MIN_MS - elapsed)
+        const minWait = hasAnySessionData() ? 0 : SPLASH_MIN_MS
+        const remaining = Math.max(0, minWait - elapsed)
         window.setTimeout(() => setShowSplash(false), remaining)
       }
     }

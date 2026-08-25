@@ -38,6 +38,7 @@ export function useCeadMapa(
   // Identifica qué "request" es la vigente; descarta resultados de requests stale
   const requestIdRef = useRef<symbol>(Symbol())
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isFirstRunRef = useRef(true)
 
   const applyData = useCallback((data: CeadFeatureCollection) => {
     setGeojson(data)
@@ -86,7 +87,19 @@ export function useCeadMapa(
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(fetchData, 300)
+
+    // Primer montaje: sin debounce. AppDataProvider ya suele haber dejado el
+    // dato en dataStore, así que fetchData resuelve por cache hit sincrónico;
+    // agregar 300ms fijos ahí solo demora el primer paint del mapa sin razón.
+    // Cambios posteriores de año/subgrupos sí se debouncean (evita spam de red
+    // mientras el usuario tipea/clickea filtros).
+    if (isFirstRunRef.current) {
+      isFirstRunRef.current = false
+      fetchData()
+    } else {
+      debounceRef.current = setTimeout(fetchData, 300)
+    }
+
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
