@@ -10,7 +10,7 @@ comunicar públicamente cualquier cifra publicada en la plataforma.
 
 | # | Fuente | Organismo | Granularidad | Cobertura temporal | Métrica base | Estado |
 |---|--------|-----------|--------------|--------------------|--------------|--------|
-| 1 | **CEAD** | Subsecretaría de Prevención del Delito | Comunal (344/346) | 2005-2024 | Tasa/100k + frecuencia | ✅ Operativa |
+| 1 | **CEAD** | Subsecretaría de Prevención del Delito | Comunal (344/346) | 2005-2025 | Tasa/100k + frecuencia | ✅ Operativa |
 | 2 | **DPP** | Defensoría Penal Pública | Nacional + Regional (16) | 2020-2024 | Nº causas, nº imputados | ✅ Operativa |
 | 3 | **PDI / datos.gob.cl** | Policía de Investigaciones vía portal de datos abiertos | Regional | 2024 | Frecuencia (delitos, denuncias, víctimas) | ✅ Operativa |
 | 4 | **GADM v4.1** | Global Administrative Divisions (no-gov) | Comunal | N/A | Geometrías MULTIPOLYGON | ✅ Operativa |
@@ -114,7 +114,12 @@ CREATE INDEX idx_cead_filtros ON cead_hechos (comuna_id, anio, subgrupo_id);
 
 ### Volumen real
 - Checkpoint (JSONL bruto): ~92.659 líneas
-- Filas únicas en DB post-consolidación: **~50.862**
+- Filas únicas en DB post-consolidación: **50.862**
+
+> Verificado contra la API el 2026-08-25: la serie llega hasta **2025**, no 2024.
+> Totales nacionales (suma de frecuencia sobre los 7 subgrupos, 344 comunas):
+> 2021 = 112.378 · 2022 = 122.254 · 2023 = 122.838 · 2024 = 122.340 · 2025 = 126.388.
+> 2025 tiene 342 comunas con dato: es un año completo, no un tramo parcial.
 
 ### Limitaciones conocidas
 1. **Comunas faltantes en mapa:** Pozo Almonte (1404) y Antártica (12202) no existen
@@ -160,9 +165,13 @@ Tres hojas del XLSX:
    - Absolución
    - Condena
    - Derivación
-   - Facultativos
-   - Otras
+   - Facultativos de Fiscalía
+   - Otras formas de término
    - Salida Alternativa
+
+   > Verificado contra la API el 2026-08-25: las seis aparecen en 2020-2023,
+   > pero **2024 no trae "Salida Alternativa"**. Cualquier gráfico comparativo
+   > entre años debe tolerar categorías ausentes, no asumir las seis siempre.
 3. **"Ingresos Terminos DR"** — Totales regionales por oficina de la defensoría
    (16 regiones).
 
@@ -448,7 +457,59 @@ la granularidad nativa del organismo emisor.
 - **Organismo:** Fiscalía Nacional, Ministerio Público.
 - **URL:** https://www.fiscaliadechile.cl/persecucion-penal/estadisticas
 - **Cobertura:** boletines trimestrales, semestrales, anuales. Boletín 1er semestre 2025 publicado dic-2025.
-- **Granularidad:** causas ingresadas / terminadas / formalizadas por fiscalía regional + categoría de delito. No comunal. No individualizable.
+- **Granularidad:** causas ingresadas / terminadas por fiscalía regional + categoría de delito. No comunal. No individualizable.
+- **Verificado 2026-08-25:** lo efectivamente ingerido son sólo **ingresos y términos** (64 filas = 16 regiones × 2 años × 2 métricas). No hay métrica de formalizaciones en el ETL ni en la API, pese a que documentación previa la mencionaba.
+
+#### 1.2.1 Hojas del boletín aún NO aprovechadas
+
+El boletín anual trae **62 hojas** y el ETL usa **4** (`TB3.1`, `TB3.2`, `TB4.1`,
+`TB4.2`). Inspección del boletín 2025 el 2026-08-25 buscando la categoría
+`DELITOS LEY DE DROGAS`:
+
+| Hoja | Contenido | Categoría Ley de Drogas | Aporte |
+|------|-----------|-------------------------|--------|
+| `TB6.2` | Términos aplicados por región y categoría de delitos | ✅ (fila 240) | **Tipos de término reales**: sentencia condenatoria, absolutoria, sobreseimiento definitivo/temporal, suspensión condicional, acuerdo reparatorio, facultad de no investigar. Es el equivalente Fiscalía de las formas de término de la DPP — permite contrastar persecución vs defensa. |
+| `TB9` | Juicios orales realizados por región y categoría de delito | ✅ | Lo más cercano a **etapa judicial** disponible sin PJud. Cierra parcialmente el hueco del embudo. |
+| `TB7` | Tiempos promedio de tramitación (días) por región y categoría | ✅ | Eje nuevo: **duración del proceso**. Ninguna otra fuente lo entrega. |
+| `TB5.2.1` | Imputados conocidos por categoría de delitos, sexo y tramo etario | ✅ | **Demografía de los imputados** por Ley de Drogas. Ninguna otra fuente operativa la tiene. |
+| `TB11` | Audiencias a imputados formalizados por región | ❌ sin categoría | **No ingerible**: sus columnas son REGIÓN / AUDIENCIAS DE FORMALIZACIÓN / IMPUTADOS FORMALIZADOS. Aislar Ley 20.000 exigiría imputar. Descartada por política. |
+
+Las cuatro primeras respetan la granularidad nativa (región × categoría × año) y
+no requieren ninguna aproximación. Son la ampliación de mayor relación
+valor/costo del observatorio: misma fuente ya descargada, mismo pipeline, sin
+solicitudes ni desbloqueos pendientes.
+
+**Estado: INGERIDAS** (2026-08-25). Pipeline en
+`backend/etl/fiscalia/detalle_consolidator.py` → tabla `fiscalia_detalle`,
+636 filas para 2024-2025:
+
+| Métrica | Filas/año | Granularidad |
+|---------|-----------|--------------|
+| `tipo_termino` | 256 | 16 regiones × 16 tipos de término |
+| `juicios_orales` | 16 | 16 regiones |
+| `dias_tramitacion` | 38 | 15 regiones + 4 zonales RM, × 2 vías de salida |
+| `imputados_demografia` | 8 | Nacional (sexo × tramo etario) |
+
+Decisiones metodológicas del parser:
+
+1. **Metropolitana.** Fiscalía la publica como cuatro fiscalías zonales
+   (RM CN / OR / OCC / SUR). En los conteos se **suman** a `region_id="13"`.
+   En `dias_tramitacion` **no se agregan**: son promedios, y promediarlos sin el
+   volumen de causas de cada zonal produciría un número que no existe en la
+   fuente. Se conservan las cuatro filas, distinguidas en `subdimension`.
+2. **Subtotales excluidos.** TB6.2 trae `SUBTOTAL ...` y `TOTAL POR ...`; el ETL
+   guarda sólo los 16 términos atómicos para que sumar la tabla no cuente doble.
+3. **Tablas de porcentajes descartadas.** Cada hoja repite su tabla como
+   fracciones 0<v<1 más abajo; se filtran por tipo.
+
+**Inconsistencia detectada en la fuente:** en el boletín **2025**, el subtotal de
+imputados hombres de TB5.2.1 (23.852) no cuadra con sus propios componentes
+(23.851). El de 2024 cuadra exacto. El ETL conserva el desglose sin ajustar y
+emite un warning de cuadratura; nunca corrige el dato.
+
+**Validación cruzada al ingerir:** los valores por región de TB6.2 y el total
+nacional de TB9 (2.373 juicios orales en 2025) coinciden exactamente con los
+totales que publica la propia hoja.
 - **Formato:** PDF + tablas Excel por boletín.
 - **Aporte:** etapa "Ministerio Público" — formalizaciones y términos antes de sentencia. Complementa DPP (defensa) con persecución.
 - **Caveat:** taxonomía Fiscalía ≠ taxonomía DPP. Ambos regionales.

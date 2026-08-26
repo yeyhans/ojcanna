@@ -11,12 +11,20 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from api.database import get_pool
 from api.schemas.fiscalia import (
+    FiscaliaDemografiaItem,
+    FiscaliaDemografiaResponse,
     FiscaliaFiltrosResponse,
+    FiscaliaJuicioRegion,
+    FiscaliaJuiciosResponse,
     FiscaliaRegion,
     FiscaliaRegionesResponse,
     FiscaliaResumenResponse,
     FiscaliaSeriePunto,
     FiscaliaSerieResponse,
+    FiscaliaTerminosResponse,
+    FiscaliaTipoTermino,
+    FiscaliaTramitacionRegion,
+    FiscaliaTramitacionResponse,
 )
 
 router = APIRouter(prefix="/api/v1/fiscalia", tags=["fiscalia"])
@@ -159,3 +167,183 @@ async def fiscalia_regiones(
     )
     _REGIONES_CACHE[anio] = result
     return result
+
+
+# ---------------------------------------------------------------------------
+# Tabla fiscalia_detalle — hojas del boletín con dimensiones.
+#
+# Todas estas rutas devuelven una respuesta vacía (no 404) si la tabla aún no
+# existe: el ETL de detalle es posterior al de boletín y un despliegue puede
+# tener uno sin el otro.
+# ---------------------------------------------------------------------------
+
+_TERMINOS_SQL = """
+SELECT dimension AS tipo,
+       subdimension AS grupo,
+       SUM(valor)::int AS n_causas
+FROM fiscalia_detalle
+WHERE metrica = 'tipo_termino' AND anio = $1
+GROUP BY dimension, subdimension
+ORDER BY n_causas DESC
+"""
+
+_JUICIOS_SQL = """
+SELECT region_id, MAX(region_nombre) AS region_nombre, SUM(valor)::int AS juicios
+FROM fiscalia_detalle
+WHERE metrica = 'juicios_orales' AND anio = $1
+GROUP BY region_id
+ORDER BY juicios DESC
+"""
+
+_TRAMITACION_SQL = """
+SELECT region_id,
+       MAX(region_nombre) AS region_nombre,
+       subdimension AS zonal,
+       MAX(CASE WHEN dimension = 'salida_judicial' THEN valor END) AS judicial,
+       MAX(CASE WHEN dimension = 'salida_no_judicial' THEN valor END) AS no_judicial
+FROM fiscalia_detalle
+WHERE metrica = 'dias_tramitacion' AND anio = $1
+GROUP BY region_id, subdimension
+ORDER BY region_id, subdimension NULLS FIRST
+"""
+
+_DEMOGRAFIA_SQL = """
+SELECT dimension AS sexo, subdimension AS tramo, SUM(valor)::int AS n
+FROM fiscalia_detalle
+WHERE metrica = 'imputados_demografia' AND anio = $1
+GROUP BY dimension, subdimension
+ORDER BY n DESC
+"""
+
+
+@router.get("/terminos", response_model=FiscaliaTerminosResponse)
+async def fiscalia_terminos(
+    anio: int = Query(..., ge=2020, le=2030),
+    pool: asyncpg.Pool = Depends(get_pool),
+) -> FiscaliaTerminosResponse:
+    """
+    Cómo terminan las causas de Ley 20.000 según el Ministerio Público.
+
+    Fuente: hoja TB6.2 del boletín anual. Es el equivalente persecutor de las
+    formas de término que publica la Defensoría, y permite contrastar ambas.
+    Sólo términos atómicos — los subtotales de la fuente se descartan en el ETL
+    para que la suma no cuente doble.
+    """
+    async with pool.acquire() as conn:
+        try:
+            rows = await conn.fetch(_TERMINOS_SQL, anio)
+        except asyncpg.exceptions.UndefinedTableError:
+            return FiscaliaTerminosResponse(anio=anio, total_terminos=0, tipos=[])
+
+    total = sum(int(r["n_causas"] or 0) for r in rows)
+    return FiscaliaTerminosResponse(
+        anio=anio,
+        total_terminos=total,
+        tipos=[
+            FiscaliaTipoTermino(
+                tipo=r["tipo"],
+                grupo=r["grupo"] or "otros_terminos",
+                n_causas=int(r["n_causas"] or 0),
+                porcentaje=round(100 * int(r["n_causas"] or 0) / total, 1) if total else 0.0,
+            )
+            for r in rows
+        ],
+    )
+
+
+@router.get("/juicios-orales", response_model=FiscaliaJuiciosResponse)
+async def fiscalia_juicios_orales(
+    anio: int = Query(..., ge=2020, le=2030),
+    pool: asyncpg.Pool = Depends(get_pool),
+) -> FiscaliaJuiciosResponse:
+    """
+    Juicios orales realizados por región en causas de Ley 20.000 (hoja TB9).
+
+    Es la aproximación más cercana a la etapa judicial disponible mientras el
+    dataset del Poder Judicial siga bloqueado.
+    """
+    async with pool.acquire() as conn:
+        try:
+            rows = await conn.fetch(_JUICIOS_SQL, anio)
+        except asyncpg.exceptions.UndefinedTableError:
+            return FiscaliaJuiciosResponse(anio=anio, total_nacional=0, regiones=[])
+
+    return FiscaliaJuiciosResponse(
+        anio=anio,
+        total_nacional=sum(int(r["juicios"] or 0) for r in rows),
+        regiones=[
+            FiscaliaJuicioRegion(
+                region_id=r["region_id"],
+                region_nombre=r["region_nombre"] or r["region_id"],
+                juicios_orales=int(r["juicios"] or 0),
+            )
+            for r in rows
+        ],
+    )
+
+
+@router.get("/tramitacion", response_model=FiscaliaTramitacionResponse)
+async def fiscalia_tramitacion(
+    anio: int = Query(..., ge=2020, le=2030),
+    pool: asyncpg.Pool = Depends(get_pool),
+) -> FiscaliaTramitacionResponse:
+    """
+    Días promedio de tramitación por región y vía de salida (hoja TB7).
+
+    La Metropolitana llega desagregada en sus cuatro fiscalías zonales y se
+    devuelve así: son promedios, y agregarlos sin el volumen de causas de cada
+    zonal produciría una cifra que no existe en la fuente.
+    """
+    async with pool.acquire() as conn:
+        try:
+            rows = await conn.fetch(_TRAMITACION_SQL, anio)
+        except asyncpg.exceptions.UndefinedTableError:
+            return FiscaliaTramitacionResponse(anio=anio, regiones=[])
+
+    return FiscaliaTramitacionResponse(
+        anio=anio,
+        regiones=[
+            FiscaliaTramitacionRegion(
+                region_id=r["region_id"],
+                region_nombre=r["region_nombre"] or r["region_id"],
+                zonal=r["zonal"],
+                dias_salida_judicial=float(r["judicial"]) if r["judicial"] is not None else None,
+                dias_salida_no_judicial=(
+                    float(r["no_judicial"]) if r["no_judicial"] is not None else None
+                ),
+            )
+            for r in rows
+        ],
+    )
+
+
+@router.get("/demografia", response_model=FiscaliaDemografiaResponse)
+async def fiscalia_demografia(
+    anio: int = Query(..., ge=2020, le=2030),
+    pool: asyncpg.Pool = Depends(get_pool),
+) -> FiscaliaDemografiaResponse:
+    """
+    Imputados conocidos por sexo y tramo etario (hoja TB5.2.1).
+
+    Única fuente operativa del observatorio con demografía de imputados en
+    causas de Ley 20.000. La fuente la publica sólo a nivel nacional y no se
+    distribuye a regiones.
+    """
+    async with pool.acquire() as conn:
+        try:
+            rows = await conn.fetch(_DEMOGRAFIA_SQL, anio)
+        except asyncpg.exceptions.UndefinedTableError:
+            return FiscaliaDemografiaResponse(anio=anio, total_imputados=0, items=[])
+
+    return FiscaliaDemografiaResponse(
+        anio=anio,
+        total_imputados=sum(int(r["n"] or 0) for r in rows),
+        items=[
+            FiscaliaDemografiaItem(
+                sexo=r["sexo"],
+                tramo_etario=r["tramo"] or "Sin información",
+                n_imputados=int(r["n"] or 0),
+            )
+            for r in rows
+        ],
+    )

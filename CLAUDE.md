@@ -12,7 +12,8 @@ judicial en causas de cannabis cruzando sentencias del PJud.
 - DPP (defensorial, regional)
 - PDI / datos.gob.cl (investigativa, regional)
 - Fiscalía Nacional / Ministerio Público (persecutora, regional)
-- INE Proyecciones base 2017 (denominador poblacional comunal, 2002-2035)
+- INE Proyecciones base 2017 (denominador poblacional comunal; serie oficial
+  2002-2035, tramo efectivamente cargado en DB 2005-2025)
 
 **Fuente planificada:** PJud (sentencias) — pipeline scraper + NLP (MVP metadata-only;
 texto completo pendiente de SAIP, reCAPTCHA v3 bloquea scraping anónimo).
@@ -95,7 +96,7 @@ anonimouscanna/
 │   │       ├── models.py
 │   │       └── runner.py
 │   ├── data/                       # NO commitear (.gitignore)
-│   │   ├── checkpoint.jsonl        # ~92k filas CEAD 2005-2024
+│   │   ├── checkpoint.jsonl        # ~92k filas CEAD 2005-2025
 │   │   ├── dpp/                    # XLSX 2020-2024
 │   │   ├── pdi/                    # XLS 2024-2025 (delitos, denuncias, víctimas)
 │   │   ├── fiscalia/               # XLS 2024 + XLSX 2025
@@ -108,15 +109,21 @@ anonimouscanna/
 │   └── .env                        # DATABASE_URL, PJUD_AUDIT_SALT (NO commitear)
 ├── frontend/
 │   └── src/
-│       ├── App.tsx                 # Persistent map + Routes, splash por navegación, tema light/dark por ruta
+│       ├── App.tsx                 # Shell de documento + slot fixed del mapa (montaje perezoso)
+│       ├── routes.ts               # Registro central de rutas: label, grupo, tema, visibilidad
 │       ├── pages/
-│       │   ├── MapaPage.tsx        # Mapa coropleta CEAD (ruta "/") — SIEMPRE montada
+│       │   ├── HomePage.tsx        # Portada narrativa (ruta "/") — módulos + cifras del manifest
+│       │   ├── MapaPage.tsx        # Mapa coropleta CEAD (ruta "/mapa") — montaje perezoso, nunca se desmonta
 │       │   ├── DppPage.tsx         # Analytics DPP (/dpp)
 │       │   ├── PdiPage.tsx         # Analytics PDI (/pdi)
 │       │   ├── FiscaliaPage.tsx    # Analytics Fiscalía (/fiscalia)
 │       │   ├── PjudPage.tsx        # Analytics PJud (HIDDEN — pendiente SAIP)
 │       │   ├── EmbudoPage.tsx      # Embudo/Sankey (HIDDEN — requiere datos PJud)
-│       │   └── DatosPage.tsx       # Metadata de las 5 fuentes, descargas CSV/XLSX (/datos)
+│       │   ├── DatosPage.tsx       # Metadata de las 5 fuentes, descargas CSV/XLSX (/datos)
+│       │   ├── BibliografiaPage.tsx # Corpus normativo — 17 PDFs catalogados (/bibliografia)
+│       │   └── MetodologiaPage.tsx # Qué mide/no mide cada fuente, vacíos declarados (/metodologia)
+│       ├── data/
+│       │   └── bibliografia.ts     # Catálogo del corpus normativo (estático, sin backend)
 │       ├── components/
 │       │   ├── MapaCEAD.tsx        # Canvas MapLibre
 │       │   ├── MapaChoropleth.tsx  # Layer con step expression
@@ -187,7 +194,7 @@ anonimouscanna/
 CREATE TABLE comunas (cut VARCHAR(6) PRIMARY KEY, nombre, region_id, geom GEOMETRY(MULTIPOLYGON,4326));
 CREATE INDEX ON comunas USING GIST(geom);
 
--- CEAD: hechos policiales comunales (~50.862 filas, 2005-2024)
+-- CEAD: hechos policiales comunales (50.862 filas, 2005-2025 — verificado 2026-08-25)
 CREATE TABLE cead_hechos (...);
 -- UNIQUE(anio, comuna_id, subgrupo_id, tipo_caso, taxonomy_version)
 
@@ -200,11 +207,22 @@ CREATE TABLE datosgob_seguridad (...);
 -- UNIQUE(anio, COALESCE(region_id,''), categoria, COALESCE(subcategoria,''))
 
 -- Fiscalía: boletines anuales categoría "Ley 20.000" (2024-2025, regional)
+-- Fiscalía detalle: hojas del boletín con dimensiones (TB6.2, TB9, TB7, TB5.2.1)
+CREATE TABLE fiscalia_detalle (anio, metrica, region_id, region_nombre, categoria_delito,
+                               dimension, subdimension, valor NUMERIC, unidad, ...);
+-- UNIQUE(anio, metrica, COALESCE(region_id,''), categoria_delito,
+--        COALESCE(dimension,''), COALESCE(subdimension,''))
+-- metrica ∈ {tipo_termino, juicios_orales, dias_tramitacion, imputados_demografia}
+-- region_id NULL = dato sólo nacional en la fuente (TB5.2.1) — no se distribuye.
+-- valor es NUMERIC porque dias_tramitacion son promedios, no conteos.
+
 CREATE TABLE fiscalia_boletin (anio, region_id, region_nombre, categoria_delito, tipo_metrica, n_causas, ...);
 -- UNIQUE(anio, region_id, categoria_delito, tipo_metrica)
--- tipo_metrica ∈ {ingresos, terminos, formalizaciones}
+-- tipo_metrica ∈ {ingresos, terminos}  ← verificado 2026-08-25 contra la DB:
+--   64 filas = 16 regiones × 2 años × 2 métricas. NO existe "formalizaciones"
+--   (cero menciones en etl/fiscalia/, routers/fiscalia.py y schemas/fiscalia.py).
 
--- INE Proyecciones base Censo 2017 (denominador 2002-2035, comunal)
+-- INE Proyecciones base Censo 2017 (comunal; cargado 2005-2025 = 346 comunas × 21 años)
 CREATE TABLE ine_poblacion (cut, nombre, anio, poblacion_total, fuente, ...);
 -- UNIQUE(cut, anio, fuente)
 
@@ -265,7 +283,7 @@ npx tsc --noEmit  # Type check sin compilar
 |--------|------|-------------|
 | GET | `/health` | Health check |
 
-### CEAD (comunal, 2005-2024)
+### CEAD (comunal, 2005-2025)
 | Ruta | Descripción |
 |------|-------------|
 | `GET /api/v1/cead/filtros` | Años disponibles + 7 subgrupos |
@@ -273,11 +291,11 @@ npx tsc --noEmit  # Type check sin compilar
 | `GET /api/v1/cead/stats?anio=&subgrupos=` | Stats comunales (tasa + frecuencia) |
 | `GET /api/v1/mapa/cead` | **DEPRECATED** — geom+stats en un solo payload |
 
-### Contexto — Población INE (comunal, 2002-2035)
+### Contexto — Población INE (comunal, cargado 2005-2025)
 | Ruta | Descripción |
 |------|-------------|
 | `GET /api/v1/contexto/poblacion?anio=` | Población por comuna para un año |
-| `GET /api/v1/contexto/poblacion/serie?comuna=` | Serie anual 2002-2035 por comuna |
+| `GET /api/v1/contexto/poblacion/serie?comuna=` | Serie anual por comuna (tramo cargado) |
 
 ### DPP (regional/nacional, 2020-2024)
 | Ruta | Descripción |
@@ -300,10 +318,14 @@ npx tsc --noEmit  # Type check sin compilar
 ### Fiscalía Nacional (regional, 2024-2025)
 | Ruta | Descripción |
 |------|-------------|
-| `GET /api/v1/fiscalia/filtros` | Años + tipos de métrica (ingresos/términos/formalizaciones) |
+| `GET /api/v1/fiscalia/filtros` | Años disponibles (devuelve sólo `anios`; no expone tipos de métrica) |
 | `GET /api/v1/fiscalia/resumen?anio=` | Totales nacionales Ley 20.000 |
 | `GET /api/v1/fiscalia/serie` | Serie temporal |
-| `GET /api/v1/fiscalia/regiones?anio=&tipo_metrica=` | Distribución regional |
+| `GET /api/v1/fiscalia/regiones?anio=` | Distribución regional — cada fila trae `ingresos` y `terminos` |
+| `GET /api/v1/fiscalia/terminos?anio=` | Tipos de término (hoja TB6.2) agrupados en judicial / no judicial / otros |
+| `GET /api/v1/fiscalia/juicios-orales?anio=` | Juicios orales por región (hoja TB9) |
+| `GET /api/v1/fiscalia/tramitacion?anio=` | Días promedio de tramitación por región y vía (hoja TB7) |
+| `GET /api/v1/fiscalia/demografia?anio=` | Imputados por sexo y tramo etario, sólo nacional (hoja TB5.2.1) |
 
 ### PJud — Sentencias Ley 20.000 (MVP metadata-only)
 | Ruta | Descripción |
@@ -347,36 +369,60 @@ npx tsc --noEmit  # Type check sin compilar
 | A | Mapa coropleta CEAD | ✅ **Completo** |
 | B | Analytics DPP (causas defensoriales) | ✅ **Completo** |
 | C | Analytics PDI / datos.gob.cl | ✅ **Completo** |
-| D | Analytics Fiscalía (Boletines Anuales) | ✅ **Completo** |
+| D | Analytics Fiscalía (Boletines Anuales) | ✅ **Completo** — incluye detalle TB6.2/TB9/TB7/TB5.2.1 (`fiscalia_detalle`, 636 filas) |
 | E | INE Proyecciones — denominador poblacional | ✅ **Completo** |
 | F | Embudo del Punitivismo + Sankey UNODC | 🟡 **Backend listo, UI oculta** — restaurar ruta `/embudo` cuando haya datos PJud |
 | G | Scraper PJud + Pipeline NLP | 🟡 **MVP metadata-only** — pipeline + 7 endpoints listos; bloqueado por reCAPTCHA v3 y auth institucional. UI oculta del NavBar |
 | H | Dashboards de discrecionalidad judicial | 🟡 **UI oculta** — código preservado; restaurar destapando las dos rutas comentadas en `App.tsx` y `NavBar.tsx` cuando llegue dataset PJud |
 | I | Página de datos abiertos `/datos` | ✅ **Completo** — manifest + export CSV/XLSX de las 5 fuentes |
+| J | Reestructuración: portada + shell de documento | ✅ **Completo** — ver `docs/reestructuracion_frontend.md` |
+| K | Corpus normativo `/bibliografia` | 🟡 **Publicado** — 17 documentos catalogados; 8 sin resumen verificado (escaneos sin capa de texto) |
+| L | Metodología pública `/metodologia` | ✅ **Completo** — síntesis de `FUENTES.md` con vacíos declarados |
+| M | Módulo educativo `/aprende` (desde `knowledge/`) | ⬜ **Pendiente** |
+| N | Fichas de normativa `/normativa` | ⬜ **Pendiente** |
+| O | Seguimiento legislativo `/legislativo` | ⬜ **Pendiente** — requiere ETL nuevo (camara.cl / senado.cl) |
 
 ## Arquitectura del Frontend
 
-### Layout persistente (`App.tsx`)
-El mapa (`MapaPage`) **nunca se desmonta**. Vive en un slot absoluto `inset:0` que
-alterna `visibility`/`zIndex`/`pointerEvents` según la ruta (`isMapaRoute`). Las
-rutas analíticas viven en un segundo slot que ocupa el mismo espacio cuando el path
-no es `/`. MapLibre conserva su instancia, tiles y style entre navegaciones.
+### Registro central de rutas (`routes.ts`)
+Fuente única de verdad para el NavBar, el tema y la visibilidad. Agregar una ruta
+= una entrada en `ROUTES` + su `<Route>` en `App.tsx`. Cada entrada declara
+`group` (capa de la arquitectura de información), `theme` y `visible`.
+
+### Layout de documento (`App.tsx`)
+`<main>` usa el **scroll natural del documento** — necesario para páginas largas
+como `/bibliografia` y `/metodologia`, que antes quedaban en scroll anidado dentro
+de un contenedor de `height:100dvh`.
+
+El mapa vive en un slot `fixed` propio, con **montaje perezoso**: se monta la
+primera vez que se entra a `/mapa` (con el contenedor ya visible, porque MapLibre
+calcula mal su tamaño si se monta oculto) y desde entonces nunca se desmonta,
+alternando `visibility`/`pointerEvents`/`zIndex`. Conserva instancia, tiles y
+style entre navegaciones sin que lo pague quien nunca abre el mapa.
+
+`MapaPage` es **lazy**: MapLibre GL (~217 KB gzip) salió del bundle inicial y se
+prefetchea en idle.
 
 ### Tema por ruta
-- `/` (mapa) → `data-theme="light"` (basemap Carto claro)
-- Resto de rutas → `data-theme="dark"`
+Declarado en `routes.ts` (`themeForPath`), no derivado del pathname:
+- `/mapa` → `data-theme="light"` (basemap Carto claro)
+- Resto → `data-theme="dark"`
 
-El switch es automático en cada navegación client-side; `useTheme.ts` controla el
-estado para componentes que lo necesitan.
-
-### Splash en cada navegación
-Además del splash inicial (`showSplash`), cada cambio de ruta muestra un splash
-corto (`ROUTE_SPLASH_MS = 1500`) para dar feedback durante el lazy-load del chunk.
+### Splash sólo inicial
+El splash cubre únicamente el arranque (presentación de marca, `SPLASH_MIN_MS`).
+Se eliminó el splash por navegación: las páginas-documento no justifican espera
+artificial.
 
 ### Rutas activas
-`/`, `/dpp`, `/pdi`, `/fiscalia`, `/datos`.
-`/pjud` y `/embudo` están **comentadas** en `App.tsx` y `NavBar.tsx` hasta que haya
-datos PJud reales. El código está vivo y los tests siguen corriendo.
+`/` (portada), `/mapa`, `/dpp`, `/pdi`, `/fiscalia`, `/datos`, `/bibliografia`,
+`/metodologia`.
+`/pjud` y `/embudo` están en `routes.ts` con `visible:false` y su `<Route>`
+comentado en `App.tsx`, hasta que haya datos PJud reales. El código está vivo y
+los tests siguen corriendo.
+
+> **Cambio de URL:** el mapa dejó de estar en `/` y pasó a `/mapa`. Cualquier
+> enlace externo a `/` ahora cae en la portada, que enlaza al mapa de forma
+> destacada — no hay 404.
 
 ### Caché multinivel
 `frontend/src/store/dataStore.ts` implementa tres capas:
@@ -384,9 +430,14 @@ datos PJud reales. El código está vivo y los tests siguen corriendo.
 2. **sessionStorage** — sobrevive recargas (<50ms).
 3. **Red** — dedup por Symbol de requests in-flight para evitar duplicados.
 
-`AppDataProvider` hace pre-fetch del último año + filtros durante el splash inicial,
-y dispara **idle-prefetch** de los chunks lazy (`DppPage`, `PdiPage`, etc.) para que
-el primer click al NavBar los encuentre ya descargados.
+`AppDataProvider` bloquea sólo en `/api/v1/cead/filtros` (~1-3 KB). Las geometrías
+y stats del mapa se cargan **en idle**, no antes del primer paint: desde que la
+portada reemplazó al mapa en `/`, esperar el GeoJSON de 344 comunas en el arranque
+era hacer pagar a todo visitante por un payload que no iba a ver. También dispara
+idle-prefetch de los chunks lazy (`MapaPage`, `DppPage`, `PdiPage`, etc.).
+
+`isMapaReady` (antes `isAppReady`, que mentía) significa "el mapa CEAD puede
+pintar" — no "la app está lista".
 
 ## Librería UI compartida
 

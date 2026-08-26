@@ -12,8 +12,14 @@ import {
 } from 'recharts'
 import {
   useFiscaliaFiltros, useFiscaliaResumen, useFiscaliaSerie, useFiscaliaRegiones,
+  useFiscaliaTerminos, useFiscaliaJuicios, useFiscaliaTramitacion, useFiscaliaDemografia,
 } from '../hooks/useFiscaliaAnalytics'
-import type { FiscaliaRegion } from '../types/fiscalia'
+import type {
+  FiscaliaDemografiaItem,
+  FiscaliaRegion,
+  FiscaliaTipoTermino,
+  FiscaliaTramitacionRegion,
+} from '../types/fiscalia'
 import { InfoModal } from '../components/InfoModal'
 import {
   PageShell, SectionTitle, DataCard, KpiCard, ChartFrame, SourceBadge,
@@ -27,6 +33,61 @@ const fmt = new Intl.NumberFormat('es-CL').format
 interface RegionRow extends FiscaliaRegion {
   ratio: number | null
 }
+
+/** Etiqueta legible de los grupos de término que publica Fiscalía. */
+const GRUPO_TERMINO_LABEL: Record<string, string> = {
+  salida_judicial: 'Judicial',
+  salida_no_judicial: 'No judicial',
+  otros_terminos: 'Otros',
+}
+
+const TERMINO_COLUMNS: SortableColumn<FiscaliaTipoTermino>[] = [
+  { key: 'tipo', label: 'Tipo de término', sortable: true, align: 'left', format: 'text' },
+  {
+    key: 'grupo',
+    label: 'Vía',
+    sortable: true,
+    align: 'left',
+    format: 'text',
+    width: '120px',
+    render: (row) => (
+      <span className="text-[10px] uppercase tracking-[0.15em] text-[var(--dim-soft)]">
+        {GRUPO_TERMINO_LABEL[row.grupo] ?? row.grupo}
+      </span>
+    ),
+  },
+  { key: 'n_causas', label: 'Causas', sortable: true, align: 'right', format: 'integer' },
+  { key: 'porcentaje', label: '%', sortable: true, align: 'right', format: 'decimal' },
+]
+
+const DEMOGRAFIA_COLUMNS: SortableColumn<FiscaliaDemografiaItem>[] = [
+  { key: 'sexo', label: 'Sexo', sortable: true, align: 'left', format: 'text' },
+  { key: 'tramo_etario', label: 'Tramo etario', sortable: true, align: 'left', format: 'text' },
+  { key: 'n_imputados', label: 'Imputados', sortable: true, align: 'right', format: 'integer' },
+]
+
+interface TramitacionRow extends FiscaliaTramitacionRegion {
+  /** region_nombre, o "region — zonal" cuando la fuente subdivide la RM. */
+  nombre: string
+}
+
+const TRAMITACION_COLUMNS: SortableColumn<TramitacionRow>[] = [
+  { key: 'nombre', label: 'Región', sortable: true, align: 'left', format: 'text' },
+  {
+    key: 'dias_salida_judicial',
+    label: 'Días · judicial',
+    sortable: true,
+    align: 'right',
+    format: 'decimal',
+  },
+  {
+    key: 'dias_salida_no_judicial',
+    label: 'Días · no judicial',
+    sortable: true,
+    align: 'right',
+    format: 'decimal',
+  },
+]
 
 const REGION_COLUMNS: SortableColumn<RegionRow>[] = [
   {
@@ -105,6 +166,11 @@ export default function FiscaliaPage() {
   const { data: resumen } = useFiscaliaResumen(anio)
   const { data: serie } = useFiscaliaSerie()
   const { data: regiones } = useFiscaliaRegiones(anio)
+  // Detalle del boletín — hojas TB6.2, TB9, TB7 y TB5.2.1.
+  const { data: terminos } = useFiscaliaTerminos(anio)
+  const { data: juicios } = useFiscaliaJuicios(anio)
+  const { data: tramitacion } = useFiscaliaTramitacion(anio)
+  const { data: demografia } = useFiscaliaDemografia(anio)
 
   const regionRows = useMemo<RegionRow[]>(
     () =>
@@ -289,6 +355,124 @@ export default function FiscaliaPage() {
             initialSort={{ key: 'ingresos', direction: 'desc' }}
             exportCsv
             exportFilename={`fiscalia_regiones_${anio ?? 'all'}.csv`}
+          />
+        </section>
+      )}
+
+      {/* ─── Cómo terminan las causas (hoja TB6.2) ───────────────────────── */}
+      {terminos && terminos.tipos.length > 0 && (
+        <section className="mb-10">
+          <SectionTitle
+            eyebrow={`Formas de término · ${anio ?? ''}`}
+            title="Cómo terminan las causas"
+            subtitle={
+              <>
+                Términos aplicados por el Ministerio Público en causas de Ley
+                20.000, agrupados en salida judicial, no judicial y otros. Es el
+                contrapunto persecutor de las formas de término que publica la
+                Defensoría. Total: {fmt(terminos.total_terminos)} términos.
+              </>
+            }
+          />
+
+          <div className="grid sm:grid-cols-3 gap-4 mb-5">
+            {(
+              [
+                ['salida_judicial', 'Salida judicial'],
+                ['salida_no_judicial', 'Salida no judicial'],
+                ['otros_terminos', 'Otros términos'],
+              ] as const
+            ).map(([grupo, label]) => {
+              const n = terminos.tipos
+                .filter((t) => t.grupo === grupo)
+                .reduce((s, t) => s + t.n_causas, 0)
+              const pct = terminos.total_terminos
+                ? (100 * n) / terminos.total_terminos
+                : 0
+              return (
+                <KpiCard
+                  key={grupo}
+                  label={label}
+                  value={fmt(n)}
+                  sublabel={`${pct.toFixed(1)}% del total`}
+                  accent={grupo === 'salida_judicial'}
+                />
+              )
+            })}
+          </div>
+
+          <SortableTable
+            columns={TERMINO_COLUMNS}
+            data={terminos.tipos}
+            rowKey={(t) => t.tipo}
+            initialSort={{ key: 'n_causas', direction: 'desc' }}
+            exportCsv
+            exportFilename={`fiscalia_terminos_${anio ?? 'all'}.csv`}
+          />
+
+          <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--dim-soft)] mt-4">
+            Boletín anual · tabla 6.2 · sólo términos atómicos (sin subtotales)
+          </p>
+        </section>
+      )}
+
+      {/* ─── Juicios orales (hoja TB9) ───────────────────────────────────── */}
+      {juicios && juicios.regiones.length > 0 && (
+        <section className="mb-10">
+          <DataCard accent="left" padding="lg">
+            <SectionTitle
+              eyebrow={`Etapa judicial · ${anio ?? ''}`}
+              title={`${fmt(juicios.total_nacional)} juicios orales`}
+              subtitle="Juicios orales realizados en causas de Ley 20.000. Es la aproximación más cercana a la etapa judicial mientras el dataset del Poder Judicial siga bloqueado — no equivale a sentencias."
+            />
+            <Lollipop
+              data={juicios.regiones
+                .slice(0, 10)
+                .map((r) => ({ label: r.region_nombre, value: r.juicios_orales }))}
+            />
+          </DataCard>
+        </section>
+      )}
+
+      {/* ─── Demografía de imputados (hoja TB5.2.1) ──────────────────────── */}
+      {demografia && demografia.items.length > 0 && (
+        <section className="mb-10">
+          <SectionTitle
+            eyebrow={`Demografía · ${anio ?? ''} · nacional`}
+            title="Quiénes son los imputados"
+            subtitle={`Imputados conocidos por sexo y tramo etario. Total: ${fmt(
+              demografia.total_imputados,
+            )}. La fuente publica esta tabla sólo a nivel nacional y no se distribuye a regiones.`}
+          />
+          <SortableTable
+            columns={DEMOGRAFIA_COLUMNS}
+            data={demografia.items}
+            rowKey={(d) => `${d.sexo}-${d.tramo_etario}`}
+            initialSort={{ key: 'n_imputados', direction: 'desc' }}
+            exportCsv
+            exportFilename={`fiscalia_demografia_${anio ?? 'all'}.csv`}
+          />
+        </section>
+      )}
+
+      {/* ─── Tiempos de tramitación (hoja TB7) ───────────────────────────── */}
+      {tramitacion && tramitacion.regiones.length > 0 && (
+        <section className="mb-10">
+          <SectionTitle
+            eyebrow={`Duración del proceso · ${anio ?? ''}`}
+            title="Días promedio de tramitación"
+            subtitle="Tiempo medio desde el ingreso hasta el término, separado por vía de salida. La Metropolitana aparece en sus cuatro fiscalías zonales: son promedios y agregarlos sin el volumen de cada zonal daría una cifra que no existe en la fuente."
+          />
+          <SortableTable
+            columns={TRAMITACION_COLUMNS}
+            data={tramitacion.regiones.map((r) => ({
+              ...r,
+              nombre: r.zonal ? `${r.region_nombre} — ${r.zonal}` : r.region_nombre,
+            }))}
+            rowKey={(r) => `${r.region_id}-${r.zonal ?? 'base'}`}
+            initialSort={{ key: 'dias_salida_judicial', direction: 'desc' }}
+            exportCsv
+            exportFilename={`fiscalia_tramitacion_${anio ?? 'all'}.csv`}
           />
         </section>
       )}
