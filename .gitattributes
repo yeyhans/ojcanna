@@ -1,0 +1,20 @@
+# Marcar binarios explícitamente.
+#
+# Sin esto, en un checkout con core.autocrlf=true (Windows por defecto, y
+# también el runner que clona el repo para construir el sitio) Git puede
+# aplicar conversión de saltos de línea sobre estos archivos y corromperlos.
+# Los PDFs de frontend/public/bibliografias/ se sirven tal cual al público:
+# un byte cambiado los vuelve ilegibles.
+*.pdf   binary
+*.xls   binary
+*.xlsx  binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.webp  binary
+*.ttf   binary
+*.woff  binary
+*.woff2 binary
+
+# Normalizar saltos de línea sólo en texto.
+* text=auto
