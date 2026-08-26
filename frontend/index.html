@@ -29,13 +29,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
     <script>
       // Tema por ruta aplicado ANTES del primer paint (sin FOUC):
-      //   "/" → light (mapa coropleta)
-      //   cualquier otra ruta → dark (analytics)
-      // React sincroniza en cada navegación via useEffect en App.tsx.
+      //   "/mapa" → light (basemap Carto claro)
+      //   cualquier otra ruta, incluida "/" → dark
+      // Debe coincidir con themeForPath() en src/routes.ts, que sincroniza en
+      // cada navegación client-side.
       (function () {
         try {
           var p = window.location.pathname;
-          var theme = (p === '/' || p === '') ? 'light' : 'dark';
+          var theme = p === '/mapa' ? 'light' : 'dark';
           document.documentElement.setAttribute('data-theme', theme);
         } catch (_) { /* fallback al default HTML (dark) */ }
       })();
@@ -46,11 +47,26 @@
     <link rel="preconnect" href="https://ojcanna.onrender.com" crossorigin />
     <link rel="preconnect" href="https://basemaps.cartocdn.com" crossorigin />
 
-    <!-- Pre-fetch del par crítico: filtros y geometrías. La respuesta llega
-         al cache HTTP del browser; cuando el JS hace fetch() encuentra el
-         buffer servido sin nueva ida al servidor. -->
+    <!-- Pre-fetch de filtros: el provider los pide siempre, en cualquier ruta. -->
     <link rel="preload" as="fetch" href="/api/v1/cead/filtros" crossorigin />
-    <link rel="preload" as="fetch" href="/api/v1/cead/geometrias" crossorigin />
+
+    <!-- Las geometrías (GeoJSON de 344 comunas) SOLO se precargan en /mapa.
+         Desde que la portada reemplazó al mapa en "/", precargarlas siempre
+         significaba descargar un payload pesado que la mayoría de las visitas
+         nunca usa — el propio navegador lo advertía como preload sin uso. -->
+    <script>
+      (function () {
+        try {
+          if (window.location.pathname !== '/mapa') return;
+          var l = document.createElement('link');
+          l.rel = 'preload';
+          l.as = 'fetch';
+          l.href = '/api/v1/cead/geometrias';
+          l.crossOrigin = 'anonymous';
+          document.head.appendChild(l);
+        } catch (_) { /* el fetch normal del provider lo cubre igual */ }
+      })();
+    </script>
 
     <!-- CalSans solo se usa en el título decorativo del SplashScreen, no en el
          mapa. Prioridad baja: no debe competir por ancho de banda con los

@@ -1,21 +1,22 @@
 // frontend/src/providers/AppDataProvider.tsx
 //
-// Context que arranca al montar la app y orquesta la carga inicial:
+// Context que arranca al montar la app y orquesta la carga.
 //
-//   Step 1 (await):    /api/v1/cead/filtros           → 20%
-//   Step 2 (await):    /api/v1/cead/geometrias  ┐
-//                      /api/v1/cead/stats?...   ┘    → 70%  ← isAppReady=true, splash se oculta
-//   Step 3 (background, NO bloquea): DPP/PDI/Fiscalía + chunks lazy → 100%
+// PRIORIDAD INVERTIDA (reestructuración): la landing dejó de ser el mapa, así
+// que el arranque ya NO bloquea en el GeoJSON de 344 comunas. Antes el splash
+// esperaba geom+stats de CEAD; con la portada narrativa en "/" eso significaba
+// que todo visitante nuevo pagaba la espera de un payload que no iba a ver.
 //
-// Geom y stats van en PARALELO porque no dependen entre sí. `isAppReady`
-// significa "el mapa CEAD tiene lo que necesita para pintar" — NO implica
-// que la analítica de otras fuentes ya esté cacheada (eso corre en background
-// en Step 3 y no tiene flag propio; cada página analítica maneja su propio
-// loading state si el usuario navega antes de que termine).
+//   Step 1 (await, ~1-3 KB): /api/v1/cead/filtros        → 40%
+//   Step 2 (idle, NO bloquea): geom + stats CEAD          → 70%   isMapaReady
+//   Step 3 (idle, NO bloquea): chunks lazy + analítica    → 100%
 //
-// Splash como presentación: en la primera visita se muestra con una duración
-// mínima de SPLASH_MIN_MS para que la animación sea apreciable. Con
-// sessionStorage caliente (`hasAnySessionData`) esa espera mínima se salta.
+// El splash ahora sólo cubre el arranque inicial (presentación de marca), no
+// una dependencia de datos. Se oculta apenas pasa SPLASH_MIN_MS.
+//
+// `isMapaReady` (antes `isAppReady`, que mentía): significa "el mapa CEAD tiene
+// geometrías y stats para pintar". NO significa que la app esté lista — la
+// portada y las páginas-documento no dependen de él.
 
 import {
   createContext,
@@ -30,22 +31,22 @@ import { dataStore, hasAnySessionData } from '../store/dataStore'
 import { fetchComunasGeom } from '../store/geomStore'
 import { urlCache } from '../store/urlCache'
 
-// Tiempo mínimo que el splash queda visible en la PRIMERA visita (sin cache).
-// En visitas con sessionStorage caliente (hasAnySessionData) el splash no
-// fuerza espera — el mapa aparece apenas los datos CEAD están listos.
-const SPLASH_MIN_MS = 2000
+// Tiempo mínimo del splash en la PRIMERA visita (presentación de marca).
+// Bajó de 2000 ms: ya no espera datos, así que sostenerlo más era teatro.
+// En visitas con sessionStorage caliente no hay espera forzada.
+const SPLASH_MIN_MS = 1200
 
 interface AppDataContextValue {
-  /** true cuando geom+stats de CEAD están listos — NO implica que DPP/PDI/Fiscalía ya cargaron. */
-  isAppReady: boolean
+  /** true cuando geom+stats de CEAD están listos — SOLO afecta a /mapa. */
+  isMapaReady: boolean
   filtros: FiltrosResponse | null
   showSplash: boolean
-  /** 0 → 100 progreso real de la carga inicial. */
+  /** 0 → 100 progreso real de la carga en background. */
   progress: number
 }
 
 const AppDataContext = createContext<AppDataContextValue>({
-  isAppReady: false,
+  isMapaReady: false,
   filtros: null,
   showSplash: false,
   progress: 0,
@@ -69,7 +70,11 @@ const ric: (cb: (deadline: IdleDeadline) => void, opts?: { timeout: number }) =>
 
 function prefetchLazyChunks(): void {
   // Carga los módulos en idle para que el primer click al NavBar encuentre
-  // el chunk listo.
+  // el chunk listo. MapaPage entra acá porque dejó de ser la landing: arrastra
+  // MapLibre GL y ya no está en el bundle inicial.
+  ric(() => {
+    void import('../pages/MapaPage')
+  })
   ric(() => {
     void import('../pages/DppPage')
   })
@@ -78,6 +83,9 @@ function prefetchLazyChunks(): void {
   })
   ric(() => {
     void import('../pages/FiscaliaPage')
+  })
+  ric(() => {
+    void import('../pages/DatosPage')
   })
 }
 
@@ -124,10 +132,8 @@ async function prefetchAnalytics(): Promise<void> {
 
 export function AppDataProvider({ children }: { children: ReactNode }) {
   const [filtros, setFiltros] = useState<FiltrosResponse | null>(null)
-  const [isAppReady, setIsAppReady] = useState(false)
+  const [isMapaReady, setIsMapaReady] = useState(false)
   const [progress, setProgress] = useState(0)
-  // El splash se muestra SIEMPRE en cada montaje (modo presentación).
-  // Se oculta cuando: (a) la data está lista Y (b) pasaron al menos SPLASH_MIN_MS.
   const [showSplash, setShowSplash] = useState<boolean>(true)
   const initialized = useRef(false)
 
@@ -135,54 +141,61 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     if (initialized.current) return
     initialized.current = true
 
-    const startedAt = Date.now()
-    let step1Ok = false
+    // El splash ya no espera datos: se agenda su cierre de entrada.
+    //
+    // Sin cleanup a propósito. El guard `initialized` hace que la segunda
+    // pasada del efecto en StrictMode salga temprano, así que un cleanup que
+    // cancelara este timer lo dejaría cancelado para siempre y el splash no se
+    // cerraría nunca en desarrollo.
+    const minWait = hasAnySessionData() ? 0 : SPLASH_MIN_MS
+    window.setTimeout(() => setShowSplash(false), minWait)
 
     async function init() {
+      let step1Ok = false
+
       try {
-        // Step 1: filtros CEAD (rápido, ~1-3 KB)
+        // Step 1: filtros CEAD (rápido, ~1-3 KB). Alimenta el FilterPanel y
+        // da el último año disponible para el prefetch del mapa.
         const res = await fetch('/api/v1/cead/filtros')
         if (!res.ok) throw new Error(`filtros: ${res.status}`)
         const data: FiltrosResponse = await res.json()
         setFiltros(data)
-        setProgress(20)
+        setProgress(40)
         step1Ok = true
 
         const lastAnio = Math.max(...data.anios)
         const subgrupos = data.subgrupos.map((s) => s.id)
 
-        // Step 2: SOLO lo que el mapa CEAD necesita para pintar (geom + stats).
-        // La analítica DPP/PDI/Fiscalía NO bloquea el splash — corre en
-        // background (ver finally) porque el usuario ya está viendo el mapa
-        // para cuando esos datos importan (navegar a /dpp, /pdi, etc).
-        await Promise.all([
-          fetchComunasGeom().then(() => setProgress(45)),
-          dataStore.prefetch(lastAnio, subgrupos).then(() => setProgress(70)),
-        ])
-        setProgress(70)
+        // Step 2: geometrías + stats del mapa EN IDLE. Ya no bloquean nada.
+        // Si el usuario entra directo a /mapa, useCeadMapa maneja su propio
+        // loading state y el fetch se deduplica en dataStore/geomStore.
+        ric(() => {
+          void Promise.all([fetchComunasGeom(), dataStore.prefetch(lastAnio, subgrupos)])
+            .then(() => {
+              setProgress(70)
+              setIsMapaReady(true)
+            })
+            .catch(() => {
+              setProgress(70)
+            })
+        })
       } catch {
         // Si algo falla, la app sigue funcionando — cada hook maneja su error
-        setProgress(70)
+        setProgress(40)
       } finally {
-        setIsAppReady(true)
         // Step 3: chunks lazy en idle (no bloquean UI)
         prefetchLazyChunks()
 
-        // Analítica DPP/PDI/Fiscalía en background — no bloquea el splash ni
-        // el primer render del mapa. Se salta si Step 1 falló (sin filtros no
-        // hay año/rango que asumir, y la sesión ya está en estado degradado).
+        // Analítica DPP/PDI/Fiscalía en background. Se salta si Step 1 falló
+        // (sin filtros no hay año/rango que asumir, y la sesión ya está
+        // en estado degradado).
         if (step1Ok) {
-          void prefetchAnalytics()
-            .then(() => setProgress(100))
-            .catch(() => setProgress(100))
+          ric(() => {
+            void prefetchAnalytics()
+              .then(() => setProgress(100))
+              .catch(() => setProgress(100))
+          })
         }
-
-        // Duración mínima del splash SOLO en la primera visita (sin cache).
-        // Con sessionStorage caliente (hasAnySessionData) no hay espera forzada.
-        const elapsed = Date.now() - startedAt
-        const minWait = hasAnySessionData() ? 0 : SPLASH_MIN_MS
-        const remaining = Math.max(0, minWait - elapsed)
-        window.setTimeout(() => setShowSplash(false), remaining)
       }
     }
 
@@ -190,7 +203,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <AppDataContext.Provider value={{ isAppReady, filtros, showSplash, progress }}>
+    <AppDataContext.Provider value={{ isMapaReady, filtros, showSplash, progress }}>
       {children}
     </AppDataContext.Provider>
   )

@@ -35,7 +35,10 @@ export function PageShell({
   return (
     <div
       className={
-        'min-h-full w-full text-[var(--ink)] bg-[var(--paper-deep)] dot-grid relative ' +
+        // min-h-dvh y no min-h-full: desde la reestructuración el shell usa el
+        // scroll del documento, así que <main> no tiene altura fija que heredar
+        // (min-h-full contra un padre sin height resuelve a 0).
+        'min-h-dvh w-full text-[var(--ink)] bg-[var(--paper-deep)] dot-grid relative ' +
         className
       }
     >
