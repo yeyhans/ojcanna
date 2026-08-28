@@ -112,7 +112,15 @@ function rangoDe(m: Modulo, manifest: ExportManifest | null): string {
 }
 
 export default function HomePage() {
-  const { data: manifest } = useCachedFetch<ExportManifest>('/api/v1/export/manifest')
+  const { data: manifest, error } = useCachedFetch<ExportManifest>(
+    '/api/v1/export/manifest'
+  )
+
+  // El backend corre en Render free tier y se duerme por inactividad: la
+  // primera visita puede esperar decenas de segundos. Mientras la request sigue
+  // viva las cifras están cargando, no ausentes — distinguirlo evita que la
+  // portada afirme un vacío que no existe.
+  const cargandoCifras = manifest === null && error === null
 
   const totalRegistros = manifest?.fuentes.reduce((sum, f) => sum + f.filas, 0) ?? null
   const totalFuentes = manifest?.fuentes.length ?? null
@@ -170,7 +178,11 @@ export default function HomePage() {
         <SectionTitle
           eyebrow="El corpus"
           title="Qué hay publicado hoy"
-          subtitle="Cifras leídas en vivo desde el manifiesto de exportación. Si aparecen en blanco, el backend está despertando."
+          subtitle={
+            error !== null
+              ? 'No pudimos leer el manifiesto de exportación. Las cifras vuelven solas en cuanto el servicio responde.'
+              : 'Cifras leídas en vivo desde el manifiesto de exportación.'
+          }
         />
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -179,16 +191,19 @@ export default function HomePage() {
             value={totalRegistros !== null ? fmt(totalRegistros) : '—'}
             sublabel="Filas publicadas"
             accent
+            loading={cargandoCifras}
           />
           <KpiCard
             label="Fuentes oficiales"
             value={totalFuentes !== null ? String(totalFuentes) : '—'}
             sublabel="Organismos del Estado"
+            loading={cargandoCifras}
           />
           <KpiCard
             label="Cobertura"
             value={anioMin !== null && anioMax !== null ? `${anioMin}–${anioMax}` : '—'}
             sublabel="Rango de años"
+            loading={cargandoCifras}
           />
           <KpiCard label="Comunas" value="344" sublabel="Con geometría PostGIS" />
         </div>
