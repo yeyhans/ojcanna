@@ -18,11 +18,13 @@ export function NavBar() {
   const groups = visibleRoutesByGroup()
   const navRef = useRef<HTMLElement>(null)
 
-  // Cerrar menús al navegar.
-  useEffect(() => {
+  // Cerrar menús al navegar. Se ajusta durante el render al cambiar la ruta.
+  const [prevPath, setPrevPath] = useState(location.pathname)
+  if (prevPath !== location.pathname) {
+    setPrevPath(location.pathname)
     setMobileOpen(false)
     setOpenGroup(null)
-  }, [location.pathname])
+  }
 
   // Cerrar el dropdown con click afuera o Escape.
   useEffect(() => {

@@ -56,11 +56,32 @@ export function useCachedFetch<T>(url: string | null): CachedFetchResult<T> {
   const [data, setData] = useState<T | null>(() =>
     url ? urlCache.get<T>(url) : null
   )
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(() =>
+    url ? urlCache.get<T>(url) === null : false
+  )
   const [error, setError] = useState<string | null>(null)
 
   // Incrementar este contador vuelve a disparar el efecto de fetch.
   const [reloadTick, setReloadTick] = useState(0)
+
+  // Al cambiar la URL o pedir un reintento, el estado síncrono (paint inmediato
+  // con cache, o spinner si no hay) se ajusta durante el render, en el mismo
+  // commit, en vez de en un efecto que pintaría primero el estado viejo.
+  const [synced, setSynced] = useState({ url, reloadTick })
+  if (synced.url !== url || synced.reloadTick !== reloadTick) {
+    setSynced({ url, reloadTick })
+    const cached = url ? urlCache.get<T>(url) : null
+    if (!url) {
+      setData(null)
+    } else if (cached !== null) {
+      setData(cached)
+      setIsLoading(false)
+      setError(null)
+    } else {
+      setIsLoading(true)
+      setError(null)
+    }
+  }
 
   // Los listeners de recuperación necesitan leer el estado actual sin volver a
   // suscribirse en cada render; un ref evita re-registrarlos.
@@ -70,24 +91,11 @@ export function useCachedFetch<T>(url: string | null): CachedFetchResult<T> {
   }, [data])
 
   useEffect(() => {
-    if (!url) {
-      setData(null)
-      return
-    }
+    if (!url) return
 
     let active = true
     const controller = new AbortController()
     const cached = urlCache.get<T>(url)
-
-    // Paint inmediato con cache si existe (UX sin spinner)
-    if (cached !== null) {
-      setData(cached)
-      setIsLoading(false)
-      setError(null)
-    } else {
-      setIsLoading(true)
-      setError(null)
-    }
 
     // Siempre revalidar en background — el cache de sessionStorage puede
     // estar obsoleto si el backend fue actualizado.

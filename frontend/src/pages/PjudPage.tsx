@@ -1,7 +1,7 @@
 // frontend/src/pages/PjudPage.tsx
 // Página de análisis Poder Judicial — sentencias Ley 20.000 (Fase E)
 // Estado actual: metadata-only (reCAPTCHA bloquea texto completo, SAIP pendiente).
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell, ScatterChart, Scatter, ZAxis,
@@ -49,17 +49,14 @@ function EmptyState({ title, sub }: { title: string; sub: string }) {
 export default function PjudPage() {
   const isMobile = useIsMobile()
   const { data: filtros } = usePjudFiltros()
-  const [anio, setAnio] = useState<number | null>(null)
+  const [anioElegido, setAnio] = useState<number | null>(null)
   const [infoOpen, setInfoOpen] = useState(false)
 
-  useEffect(() => {
-    if (filtros?.anios?.length && anio === null) {
-      setAnio(Math.max(...filtros.anios))
-    } else if (filtros && !filtros.anios?.length && anio === null) {
-      // No hay datos aún — usar 2025 (vigencia Acta 164) para que UI no quede en blanco
-      setAnio(2025)
-    }
-  }, [filtros, anio])
+  // Hasta que el usuario elija un año se muestra el más reciente con datos.
+  // Sin datos aún se usa 2025 (vigencia Acta 164) para que la UI no quede en blanco.
+  const anio =
+    anioElegido ??
+    (filtros?.anios?.length ? Math.max(...filtros.anios) : filtros ? 2025 : null)
 
   const { data: stats } = usePjudStats(anio)
   const { data: resumen } = usePjudResumen(anio)

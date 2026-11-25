@@ -4,7 +4,7 @@
 // Upgrades: componentes compartidos, tabla ordenable, paleta estrictamente
 // monocroma (sin verdes/ámbares).
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -154,14 +154,11 @@ const REGION_COLUMNS: SortableColumn<RegionRow>[] = [
 
 export default function FiscaliaPage() {
   const { data: filtros } = useFiscaliaFiltros()
-  const [anio, setAnio] = useState<number | null>(null)
+  const [anioElegido, setAnio] = useState<number | null>(null)
   const [infoOpen, setInfoOpen] = useState(false)
 
-  useEffect(() => {
-    if (filtros?.anios?.length && anio === null) {
-      setAnio(Math.max(...filtros.anios))
-    }
-  }, [filtros, anio])
+  // Hasta que el usuario elija un año se muestra el más reciente con datos.
+  const anio = anioElegido ?? (filtros?.anios?.length ? Math.max(...filtros.anios) : null)
 
   const { data: resumen } = useFiscaliaResumen(anio)
   const { data: serie } = useFiscaliaSerie()

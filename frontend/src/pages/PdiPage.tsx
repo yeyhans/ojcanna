@@ -7,7 +7,7 @@
 //   · Segmented control para subcategoría
 //   · Tabla regional ordenable como complemento del mapa
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { InfoModal } from '../components/InfoModal'
 import { usePdiFiltros, usePdiResumen, usePdiRegiones, type PdiRegionItem } from '../hooks/usePdiAnalytics'
@@ -70,21 +70,19 @@ const REGION_COLUMNS: SortableColumn<PdiRegionItem>[] = [
 
 export default function PdiPage() {
   const { data: filtros } = usePdiFiltros()
-  const [anio, setAnio] = useState<number | null>(null)
-  const [selectedCat, setSelectedCat] = useState<string | null>(null)
+  const [anioElegido, setAnio] = useState<number | null>(null)
+  const [catElegida, setSelectedCat] = useState<string | null>(null)
   const [selectedSub, setSelectedSub] = useState<Subcat>('delitos')
   const [infoOpen, setInfoOpen] = useState(false)
 
-  useEffect(() => {
-    if (filtros?.anios?.length && anio === null) {
-      setAnio(Math.max(...filtros.anios))
-    }
-    if (filtros?.categorias?.length && selectedCat === null) {
-      const mainCat =
-        filtros.categorias.find((c) => c.includes('20.000')) ?? filtros.categorias[0]
-      setSelectedCat(mainCat)
-    }
-  }, [filtros, anio, selectedCat])
+  // Hasta que el usuario elija, se muestra el año más reciente y la categoría
+  // de la Ley 20.000 (o la primera disponible).
+  const anio = anioElegido ?? (filtros?.anios?.length ? Math.max(...filtros.anios) : null)
+  const selectedCat =
+    catElegida ??
+    (filtros?.categorias?.length
+      ? (filtros.categorias.find((c) => c.includes('20.000')) ?? filtros.categorias[0])
+      : null)
 
   const { data: resumen } = usePdiResumen(anio)
   const { data: regiones } = usePdiRegiones(anio, selectedCat, selectedSub)

@@ -18,15 +18,9 @@
 // geometrías y stats para pintar". NO significa que la app esté lista — la
 // portada y las páginas-documento no dependen de él.
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { FiltrosResponse } from '../types/cead'
+import { AppDataContext } from './appDataContext'
 import { dataStore, hasAnySessionData } from '../store/dataStore'
 import { fetchComunasGeom } from '../store/geomStore'
 import { urlCache } from '../store/urlCache'
@@ -35,26 +29,6 @@ import { urlCache } from '../store/urlCache'
 // Bajó de 2000 ms: ya no espera datos, así que sostenerlo más era teatro.
 // En visitas con sessionStorage caliente no hay espera forzada.
 const SPLASH_MIN_MS = 1200
-
-interface AppDataContextValue {
-  /** true cuando geom+stats de CEAD están listos — SOLO afecta a /mapa. */
-  isMapaReady: boolean
-  filtros: FiltrosResponse | null
-  showSplash: boolean
-  /** 0 → 100 progreso real de la carga en background. */
-  progress: number
-}
-
-const AppDataContext = createContext<AppDataContextValue>({
-  isMapaReady: false,
-  filtros: null,
-  showSplash: false,
-  progress: 0,
-})
-
-export function useAppData() {
-  return useContext(AppDataContext)
-}
 
 // requestIdleCallback con fallback a setTimeout para Safari
 type IdleHandle = number
