@@ -21,12 +21,22 @@ def sample_codigos(tmp_path):
     return f
 
 
+KEY_FIELDS = ("comuna_id", "anio", "subgrupo_id")
+
+
 def test_checkpoint_guarda_y_verifica(tmp_path):
-    cp = Checkpoint(tmp_path / "cp.jsonl")
-    key = ("13101", "2024", "20")
-    assert not cp.ya_descargado(*key)
-    cp.marcar(*key)
-    assert cp.ya_descargado(*key)
+    cp_file = tmp_path / "cp.jsonl"
+    cp = Checkpoint(cp_file, key_fields=KEY_FIELDS)
+    key = {"comuna_id": "13101", "anio": 2024, "subgrupo_id": "20"}
+    assert not cp.ya_descargado(**key)
+
+    cp.guardar({**key, "frecuencia": 42})
+
+    assert cp.ya_descargado(**key)
+    assert len(cp) == 1
+    # El registro sobrevive a un reinicio: se relee desde el archivo JSONL.
+    assert Checkpoint(cp_file, key_fields=KEY_FIELDS).ya_descargado(**key)
+    assert json.loads(cp_file.read_text(encoding="utf-8"))["frecuencia"] == 42
 
 
 def test_taxonomy_version_por_anio():
@@ -40,8 +50,8 @@ def test_taxonomy_version_por_anio():
 async def test_extractor_salta_descargados(sample_codigos, tmp_path):
     """El extractor no vuelve a descargar combinaciones ya registradas en checkpoint."""
     cp_file = tmp_path / "cp.jsonl"
-    cp = Checkpoint(cp_file)
-    cp.marcar("13101", "2024", "20")
+    cp = Checkpoint(cp_file, key_fields=KEY_FIELDS)
+    cp.guardar({"comuna_id": "13101", "anio": 2024, "subgrupo_id": "20"})
 
     extractor = CeadExtractor(codigos_path=sample_codigos, checkpoint_path=cp_file, raw_dir=tmp_path)
     combinaciones = extractor._pendientes([2024])
