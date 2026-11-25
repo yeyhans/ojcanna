@@ -3,7 +3,8 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { NavBar } from './components/NavBar'
 import { SplashScreen } from './components/SplashScreen'
-import { AppDataProvider, useAppData } from './providers/AppDataProvider'
+import { AppDataProvider } from './providers/AppDataProvider'
+import { useAppData } from './providers/appDataContext'
 import { themeForPath } from './routes'
 import HomePage from './pages/HomePage'
 
@@ -69,10 +70,10 @@ function AppShell() {
   }, [location.pathname])
 
   // El mapa se monta la primera vez que se entra a /mapa y ya no se desmonta.
+  // Se ajusta durante el render (no en un efecto) para que el mapa entre en el
+  // mismo commit que la navegación a /mapa.
   const [mapaMounted, setMapaMounted] = useState(false)
-  useEffect(() => {
-    if (isMapaRoute) setMapaMounted(true)
-  }, [isMapaRoute])
+  if (isMapaRoute && !mapaMounted) setMapaMounted(true)
 
   // Al navegar entre páginas-documento el scroll debe volver arriba.
   useEffect(() => {

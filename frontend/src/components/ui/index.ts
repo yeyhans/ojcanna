@@ -3,13 +3,13 @@ export { PageShell } from './PageShell'
 export { SectionTitle } from './SectionTitle'
 export { DataCard } from './DataCard'
 export { KpiCard } from './KpiCard'
+export { ChartFrame } from './ChartFrame'
 export {
-  ChartFrame,
   chartTooltipStyle,
   chartTooltipItemStyle,
   chartAxisTickStyle,
   chartGridProps,
-} from './ChartFrame'
+} from './chartPresets'
 export { InfoTooltip } from './InfoTooltip'
 export { SourceBadge } from './SourceBadge'
 export type { Granularidad } from './SourceBadge'

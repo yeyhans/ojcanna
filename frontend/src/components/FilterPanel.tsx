@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { motion, useMotionValue } from 'framer-motion'
 import { SubgrupoCheckbox } from './SubgrupoCheckbox'
 import { useIsMobile } from '../hooks/useIsMobile'
-import { useAppData } from '../providers/AppDataProvider'
+import { useAppData } from '../providers/appDataContext'
 import { ComunaRanking } from './ComunaRanking'
 import type { CeadFeatureCollection } from '../types/cead'
 
@@ -26,25 +26,30 @@ export function FilterPanel({
 }: FilterPanelProps) {
   const isMobile = useIsMobile()
   const { filtros } = useAppData()
-  const [anio, setAnio] = useState<number>(2024)
-  const [subgruposSeleccionados, setSubgruposSeleccionados] = useState<string[]>([])
+  const [anioElegido, setAnio] = useState<number | null>(null)
+  const [subgruposElegidos, setSubgruposSeleccionados] = useState<string[] | null>(null)
   const [sheetHeight, setSheetHeight] = useState(SNAP_COLLAPSED)
   const dragY = useMotionValue(0)
   const initializedRef = useRef(false)
+
+  // Hasta que el usuario elija: el año más reciente y todos los subgrupos.
+  const anio = anioElegido ?? (filtros ? Math.max(...filtros.anios) : 2024)
+  const subgruposSeleccionados =
+    subgruposElegidos ?? (filtros ? filtros.subgrupos.map((s) => s.id) : [])
 
   useEffect(() => {
     if (!onExpandedChange) return
     onExpandedChange(isMobile && sheetHeight > SNAP_COLLAPSED + 10)
   }, [sheetHeight, isMobile, onExpandedChange])
 
+  // Avisar al padre la selección por defecto una sola vez, al llegar los filtros.
   useEffect(() => {
     if (initializedRef.current || !filtros) return
     initializedRef.current = true
-    const latestAnio = Math.max(...filtros.anios)
-    const allIds = filtros.subgrupos.map((s) => s.id)
-    setAnio(latestAnio)
-    setSubgruposSeleccionados(allIds)
-    onChange(latestAnio, allIds)
+    onChange(
+      Math.max(...filtros.anios),
+      filtros.subgrupos.map((s) => s.id),
+    )
   }, [filtros, onChange])
 
   const handleAnioChange = (newAnio: number) => {

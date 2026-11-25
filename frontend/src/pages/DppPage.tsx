@@ -8,7 +8,7 @@
 //   · KPI extra "Tasa de Condena" = condena / (condena + absolución)
 //   · Serie Ingresos vs Términos con área "stock abierto" = diferencia acumulada
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import {
   Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -68,14 +68,11 @@ function findValue(formas: FormaTermino[], nombre: string): number {
 
 export default function DppPage() {
   const { data: filtros } = useDppFiltros()
-  const [anio, setAnio] = useState<number | null>(null)
+  const [anioElegido, setAnio] = useState<number | null>(null)
   const [infoOpen, setInfoOpen] = useState(false)
 
-  useEffect(() => {
-    if (filtros?.anios?.length && anio === null) {
-      setAnio(Math.max(...filtros.anios))
-    }
-  }, [filtros, anio])
+  // Hasta que el usuario elija un año se muestra el más reciente con datos.
+  const anio = anioElegido ?? (filtros?.anios?.length ? Math.max(...filtros.anios) : null)
 
   const { data: resumen, isLoading: resumenLoading } = useDppResumen(anio)
   const { data: serie } = useDppSerie()
