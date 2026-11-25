@@ -100,9 +100,16 @@ Run frontend checks from `frontend/`:
 
 ```bash
 npm run lint
-npm exec --offline -- tsc --noEmit
+npm exec --offline -- tsc -b
 npm run build
 ```
+
+`tsconfig.json` has `"files": []` and only project references, so `tsc --noEmit` type-checks
+nothing and always passes; use build mode (`tsc -b`), which follows the references.
+
+The same commands run in CI on every pull request and on push to `main`
+(`.github/workflows/ci.yml`). Vercel and Render deploy `main` directly, so that workflow is the only
+gate before production: keep it green and keep `main` protected with its jobs as required checks.
 
 ## Context from the parent ecosystem
 
